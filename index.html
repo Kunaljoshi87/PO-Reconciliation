@@ -423,7 +423,7 @@ function renderBulk(results){
 
 /* -------------------- Diagnostics -------------------- */
 function checkOneReport(reportName, configured, label){
-  return ZOHO.CREATOR.DATA.getRecords({ app_name: CONFIG.appName, report_name: reportName, max_records: 1 })
+  return ZOHO.CREATOR.DATA.getRecords({ app_name: CONFIG.appName, report_name: reportName, max_records: 200 })
     .then(function(res){
       var rows = (res && res.data) || [];
       if(rows.length === 0){
