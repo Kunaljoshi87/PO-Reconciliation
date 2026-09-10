@@ -180,11 +180,11 @@ function showTab(name){
 function lookupPO(poNoRaw){
   var cleaned = cleanPoNo(poNoRaw);
   var poCriteria = '(' + CONFIG.poFields.poNo + ' == "' + cleaned + '")';
-  var poConfig = { app_name: CONFIG.appName, report_name: CONFIG.poReport, criteria: poCriteria };
+  var poConfig = { app_name: CONFIG.appName, report_name: CONFIG.poReport, criteria: poCriteria, max_records: 1000 };
 
   var paymentCalls = CONFIG.paymentReports.map(function(pr){
     var criteria = '(' + CONFIG.paymentFields.poNo + ' == "' + cleaned + '")';
-    return ZOHO.CREATOR.DATA.getRecords({ app_name: CONFIG.appName, report_name: pr.reportName, criteria: criteria })
+    return ZOHO.CREATOR.DATA.getRecords({ app_name: CONFIG.appName, report_name: pr.reportName, criteria: criteria, max_records: 1000 })
       .then(function(res){ return { meta: pr, rows: (res && res.data) || [] }; })
       .catch(function(){ return { meta: pr, rows: [] }; }); // a broken payment-report name just means "no requisitions found" — not fatal
   });
@@ -423,7 +423,7 @@ function renderBulk(results){
 
 /* -------------------- Diagnostics -------------------- */
 function checkOneReport(reportName, configured, label){
-  return ZOHO.CREATOR.DATA.getRecords({ app_name: CONFIG.appName, report_name: reportName, max_records: 200 })
+  return ZOHO.CREATOR.DATA.getRecords({ app_name: CONFIG.appName, report_name: reportName, max_records: 1000 })
     .then(function(res){
       var rows = (res && res.data) || [];
       if(rows.length === 0){
