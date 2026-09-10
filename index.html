@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <title>PO Reconciliation Widget</title>
 <script src="https://static.zohocdn.com/creator/widgets/version/2.0/widgetsdk-min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --bg:#F5F3EE; --surface:#fff; --border:#DCD6C8; --ink:#1E2A32; --muted:#5B6B76;
@@ -15,46 +16,80 @@
   }
   *{ box-sizing:border-box; }
   body{ margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--ink); padding:20px; }
-  .wrap{ max-width:900px; margin:0 auto; }
+  .wrap{ max-width:980px; margin:0 auto; }
   h1{ font-size:19px; margin:0 0 4px; }
+  h2{ font-size:13px; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); margin:0 0 12px; }
   .sub{ color:var(--muted); font-size:13.5px; margin-bottom:18px; }
+  .tabs{ display:flex; gap:6px; margin-bottom:16px; }
+  .tab{ padding:8px 16px; border:1px solid var(--border); background:var(--surface); border-radius:8px; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--muted); }
+  .tab.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .panel{ display:none; }
+  .panel.active{ display:block; }
   .search{ display:flex; gap:8px; margin-bottom:20px; }
   .search input{ flex:1; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; }
-  .search button{ padding:10px 18px; border:none; border-radius:8px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; font-size:14px; }
-  .search button:disabled{ opacity:0.5; cursor:default; }
+  button.primary{ padding:10px 18px; border:none; border-radius:8px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; font-size:14px; }
+  button.primary:disabled{ opacity:0.5; cursor:default; }
+  button.ghost{ padding:9px 16px; border:1px solid var(--border); background:var(--surface); border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; }
+  button.ghost:hover{ background:var(--accent-soft); }
   .card{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; margin-bottom:14px; }
-  .card h2{ font-size:13px; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); margin:0 0 12px; }
   .row{ display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid #EFEAE0; font-size:14.5px; }
   .row:last-child{ border-bottom:none; }
   .row .k{ color:var(--muted); }
   .row .v{ font-weight:600; text-align:right; }
   table{ width:100%; border-collapse:collapse; font-size:13.5px; }
-  th,td{ text-align:left; padding:8px 10px; border-bottom:1px solid #EFEAE0; }
+  th,td{ text-align:left; padding:8px 10px; border-bottom:1px solid #EFEAE0; vertical-align:top; }
   th{ color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; }
-  .pill{ display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; }
+  .pill{ display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; white-space:nowrap; }
   .pill.ok{ background:var(--ok-bg); color:var(--ok); }
   .pill.warn{ background:var(--warn-bg); color:var(--warn); }
   .pill.bad{ background:var(--bad-bg); color:var(--bad); }
   .pill.neutral{ background:var(--neutral-bg); color:var(--neutral); }
-  .verdict{ display:flex; align-items:center; gap:10px; font-size:16px; font-weight:700; }
   .note{ font-size:13.5px; color:var(--muted); margin-top:8px; }
   .empty{ color:var(--muted); font-size:14px; padding:20px 0; text-align:center; }
-  .actions{ display:flex; justify-content:flex-end; margin-top:6px; }
-  .actions button{ padding:8px 14px; border:1px solid var(--border); background:var(--surface); border-radius:7px; cursor:pointer; font-size:13px; }
-  .actions button:hover{ background:var(--accent-soft); }
+  .import-row{ display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+  .import-row input[type=file]{ font-size:13px; }
+  .toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .suggestion{ font-size:13px; color:var(--muted); max-width:280px; }
+  .count-tag{ font-size:12.5px; color:var(--muted); }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>PO Reconciliation</h1>
-  <div class="sub">Checks Vendor Name, Project Code, and Amount across the Purchase Order Report and Payment Requisitions.</div>
+  <div class="sub">Checks Vendor Name, Project Code, and Amount across the Purchase Order Report and Payment Requisitions — import, match, and view results all in this one screen.</div>
 
-  <div class="search">
-    <input id="poInput" placeholder="Enter a PO No (or part of it, e.g. 13-1176)" />
-    <button id="searchBtn" onclick="runReconciliation()">Check</button>
+  <div class="tabs">
+    <div class="tab active" id="tabQuickBtn" onclick="showTab('quick')">Quick Check (one PO)</div>
+    <div class="tab" id="tabBulkBtn" onclick="showTab('bulk')">Import &amp; Match (batch)</div>
   </div>
 
-  <div id="results"></div>
+  <div class="panel active" id="tabQuick">
+    <div class="search">
+      <input id="poInput" placeholder="Enter a PO No (or part of it, e.g. 13-1176)" />
+      <button class="primary" id="searchBtn" onclick="runQuickCheck()">Check</button>
+    </div>
+    <div id="quickResults"></div>
+  </div>
+
+  <div class="panel" id="tabBulk">
+    <div class="card">
+      <h2>1. Import your invoice list</h2>
+      <div class="import-row">
+        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" />
+        <button class="primary" id="processBtn" onclick="processImport()">Match all rows</button>
+        <span class="count-tag" id="fileStatus"></span>
+      </div>
+      <div class="note">Any column headers with "PO", "Vendor", and "Amount" in them are picked up automatically — case, extra spaces, ₹/Rs./commas in the amount column are all handled. No need to clean the file first.</div>
+    </div>
+
+    <div class="card" id="bulkResultsCard" style="display:none;">
+      <div class="toolbar">
+        <h2 style="margin:0;">2. Results</h2>
+        <button class="ghost" onclick="exportResults()">Export results (CSV)</button>
+      </div>
+      <div id="bulkResults"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -72,18 +107,27 @@ const CONFIG = {
     poNo: "PO_No",
     vendor: "Vendor_Name",
     project: "Project_Code",
-    amount: "Sub_Total"            // the "Sub Total (₹)" column
+    amount: "Sub_Total"              // the "Sub Total (₹)" column
   },
 
-  paymentReport: "All_Payment_Requisitions_INR",
+  // Payment Requisitions come in two reports by currency. If your data is
+  // truly two different currencies (not just a display/formatting split of
+  // the same underlying amount), amounts from the two are NOT added together
+  // below — each is shown and checked on its own.
+  paymentReports: [
+    { reportName: "All_Payment_Requisitions_INR", currencyLabel: "INR", symbol: "₹" },
+    { reportName: "All_Payment_Requisitions_USD", currencyLabel: "USD", symbol: "$" }
+  ],
   paymentFields: {
-    poNo: "PO_No",                 // whatever field the "PO No contains" search box uses
+    poNo: "PO_No",
     vendor: "Vendor_Name",
+    project: "Project_Code",
     payable: "Payable_Amount",
-    paymentPercent: "Payment_Percentage"
+    paymentPercent: "Payment_Percentage",
+    date: "Payment_Request_Date"
   },
 
-  amountTolerance: 1               // rupees — treat rounding this small as a match
+  amountTolerance: 1               // rupees/dollars — treat rounding this small as a match
 };
 /* ================================================================================ */
 
@@ -92,134 +136,267 @@ function cleanAmount(raw){
   var stripped = String(raw).replace(/[^0-9.]/g, "");
   return stripped === "" ? 0 : parseFloat(stripped);
 }
-
 function cleanVendor(raw){
   return String(raw || "").trim().toUpperCase().replace(/[.,]/g, "").replace(/\s+/g, " ");
 }
-
-// PO numbers look like MEPPL-2526-20015A-13-411 — the project code is the
-// 3rd dash-separated segment. Adjust this if your PO format differs.
-function projectFromPO(poNo){
-  var parts = String(poNo || "").split("-");
-  return parts.length >= 3 ? parts[2].toUpperCase() : "";
+function cleanPoNo(raw){
+  return String(raw || "").trim().toUpperCase();
+}
+function fmtMoney(n, symbol){
+  return (symbol || "₹") + Number(n || 0).toLocaleString("en-IN", {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function pill(status, label){
+  var map = { ok:"ok", warn:"warn", bad:"bad", neutral:"neutral" };
+  var cls = map[status] || "neutral";
+  return '<span class="pill ' + cls + '">' + (label || status) + '</span>';
 }
 
-function pill(status){
-  var map = { ok: ["ok","Match"], warn: ["warn","Check"], bad: ["bad","Mismatch"], neutral: ["neutral","—"] };
-  var m = map[status] || map.neutral;
-  return '<span class="pill ' + m[0] + '">' + m[1] + '</span>';
+function showTab(name){
+  document.getElementById('tabQuick').classList.toggle('active', name === 'quick');
+  document.getElementById('tabBulk').classList.toggle('active', name === 'bulk');
+  document.getElementById('tabQuickBtn').classList.toggle('active', name === 'quick');
+  document.getElementById('tabBulkBtn').classList.toggle('active', name === 'bulk');
 }
 
-function fmtMoney(n){
-  return "₹" + Number(n).toLocaleString("en-IN", {minimumFractionDigits:2, maximumFractionDigits:2});
-}
-
-function runReconciliation(){
-  var poNoRaw = document.getElementById("poInput").value.trim();
-  var resultsEl = document.getElementById("results");
-  if(!poNoRaw){
-    resultsEl.innerHTML = '<div class="empty">Enter a PO No to check.</div>';
-    return;
-  }
-
-  document.getElementById("searchBtn").disabled = true;
-  resultsEl.innerHTML = '<div class="empty">Looking up records…</div>';
-
-  var poCriteria = '(' + CONFIG.poFields.poNo + ' == "' + poNoRaw + '")';
+/* -------------------- shared lookup: one PO No -> {po, payments[]} -------------------- */
+function lookupPO(poNoRaw){
+  var cleaned = cleanPoNo(poNoRaw);
+  var poCriteria = '(' + CONFIG.poFields.poNo + ' == "' + cleaned + '")';
   var poConfig = { app_name: CONFIG.appName, report_name: CONFIG.poReport, criteria: poCriteria };
 
-  var payCriteria = '(' + CONFIG.paymentFields.poNo + ' == "' + poNoRaw + '")';
-  var payConfig = { app_name: CONFIG.appName, report_name: CONFIG.paymentReport, criteria: payCriteria };
+  var paymentCalls = CONFIG.paymentReports.map(function(pr){
+    var criteria = '(' + CONFIG.paymentFields.poNo + ' == "' + cleaned + '")';
+    return ZOHO.CREATOR.DATA.getRecords({ app_name: CONFIG.appName, report_name: pr.reportName, criteria: criteria })
+      .then(function(res){ return { meta: pr, rows: (res && res.data) || [] }; })
+      .catch(function(){ return { meta: pr, rows: [] }; });
+  });
 
-  Promise.all([
-    ZOHO.CREATOR.DATA.getRecords(poConfig),
-    ZOHO.CREATOR.DATA.getRecords(payConfig)
-  ]).then(function(resArr){
-    var poRows = (resArr[0] && resArr[0].data) || [];
-    var payRows = (resArr[1] && resArr[1].data) || [];
-    render(poNoRaw, poRows, payRows);
+  return Promise.all([
+    ZOHO.CREATOR.DATA.getRecords(poConfig).catch(function(){ return { data: [] }; }),
+    Promise.all(paymentCalls)
+  ]).then(function(r){
+    var poRows = (r[0] && r[0].data) || [];
+    return { po: poRows[0] || null, paymentGroups: r[1] };
+  });
+}
+
+/* -------------------- Quick Check tab -------------------- */
+function runQuickCheck(){
+  var poNoRaw = document.getElementById("poInput").value.trim();
+  var out = document.getElementById("quickResults");
+  if(!poNoRaw){ out.innerHTML = '<div class="empty">Enter a PO No to check.</div>'; return; }
+
+  document.getElementById("searchBtn").disabled = true;
+  out.innerHTML = '<div class="empty">Looking up records…</div>';
+
+  lookupPO(poNoRaw).then(function(result){
+    renderQuick(poNoRaw, result);
   }).catch(function(err){
-    resultsEl.innerHTML = '<div class="empty">Could not reach Creator data — check the app/report names in CONFIG, and that this page is being viewed inside the Creator widget.<br><br>' + (err && err.message ? err.message : JSON.stringify(err)) + '</div>';
+    out.innerHTML = '<div class="empty">Could not reach Creator data — check the app/report names in CONFIG.<br><br>' + (err && err.message ? err.message : JSON.stringify(err)) + '</div>';
   }).finally(function(){
     document.getElementById("searchBtn").disabled = false;
   });
 }
 
-function render(poNoRaw, poRows, payRows){
-  var resultsEl = document.getElementById("results");
-
-  if(poRows.length === 0){
-    resultsEl.innerHTML = '<div class="card"><div class="verdict">' + pill("bad") + ' No PO found matching "' + poNoRaw + '" in the Purchase Order Report.</div></div>';
+function renderQuick(poNoRaw, result){
+  var out = document.getElementById("quickResults");
+  if(!result.po){
+    out.innerHTML = '<div class="card"><div class="row"><span class="k">Result</span><span class="v">' + pill("bad","No PO found") + '</span></div></div>';
     return;
   }
-
-  var po = poRows[0];
+  var po = result.po;
   var poVendor = po[CONFIG.poFields.vendor];
-  var poProject = po[CONFIG.poFields.project] || projectFromPO(po[CONFIG.poFields.poNo]);
+  var poProject = po[CONFIG.poFields.project];
   var poAmount = cleanAmount(po[CONFIG.poFields.amount]);
 
-  var payableSum = 0;
-  var vendorMismatch = false;
-  var projectMismatch = false;
-
-  payRows.forEach(function(p){
-    payableSum += cleanAmount(p[CONFIG.paymentFields.payable]);
-    if(cleanVendor(p[CONFIG.paymentFields.vendor]) !== cleanVendor(poVendor)) vendorMismatch = true;
-    var pProject = projectFromPO(p[CONFIG.paymentFields.poNo]);
-    if(pProject && poProject && pProject !== poProject) projectMismatch = true;
-  });
-
-  var amountDiff = Math.abs(payableSum - poAmount);
-  var isFullyPaid = payRows.some(function(p){ return cleanAmount(p[CONFIG.paymentFields.paymentPercent]) >= 100; }) || payRows.length > 0;
-  var amountStatus = "neutral";
-  if(payRows.length === 0){
-    amountStatus = "neutral";
-  } else if(amountDiff <= CONFIG.amountTolerance){
-    amountStatus = "ok";
-  } else if(payableSum < poAmount){
-    amountStatus = "warn"; // could just be a partial/advance payment, not necessarily wrong
-  } else {
-    amountStatus = "bad"; // paid more than the PO — worth a look regardless
-  }
-
-  var html = "";
-
-  html += '<div class="card"><h2>Purchase Order</h2>';
+  var html = '<div class="card"><h2>Purchase Order</h2>';
   html += '<div class="row"><span class="k">PO No</span><span class="v">' + (po[CONFIG.poFields.poNo] || "—") + '</span></div>';
   html += '<div class="row"><span class="k">Vendor Name</span><span class="v">' + (poVendor || "—") + '</span></div>';
   html += '<div class="row"><span class="k">Project Code</span><span class="v">' + (poProject || "—") + '</span></div>';
   html += '<div class="row"><span class="k">Sub Total</span><span class="v">' + fmtMoney(poAmount) + '</span></div>';
   html += '</div>';
 
-  html += '<div class="card"><h2>Payment Requisitions (' + payRows.length + ')</h2>';
-  if(payRows.length === 0){
-    html += '<div class="empty">No payment requisitions raised yet for this PO.</div>';
-  } else {
-    html += '<table><tr><th>Date</th><th>Vendor</th><th>Payment %</th><th>Payable Amount</th></tr>';
-    payRows.forEach(function(p){
-      html += '<tr><td>' + (p.Payment_Request_Date || "—") + '</td><td>' + (p[CONFIG.paymentFields.vendor] || "—") + '</td><td>' + (p[CONFIG.paymentFields.paymentPercent] || "—") + '</td><td>' + fmtMoney(cleanAmount(p[CONFIG.paymentFields.payable])) + '</td></tr>';
-    });
-    html += '</table>';
-    html += '<div class="row" style="margin-top:8px;"><span class="k">Total Payable (all requisitions)</span><span class="v">' + fmtMoney(payableSum) + '</span></div>';
-  }
-  html += '</div>';
+  result.paymentGroups.forEach(function(group){
+    var meta = group.meta, rows = group.rows;
+    html += '<div class="card"><h2>Payment Requisitions — ' + meta.currencyLabel + ' (' + rows.length + ')</h2>';
+    if(rows.length === 0){
+      html += '<div class="empty">None in this currency.</div>';
+    } else {
+      var sum = 0, vendorMismatch = false, projectMismatch = false;
+      html += '<table><tr><th>Date</th><th>Vendor</th><th>Project</th><th>Payment %</th><th>Payable</th></tr>';
+      rows.forEach(function(p){
+        sum += cleanAmount(p[CONFIG.paymentFields.payable]);
+        if(cleanVendor(p[CONFIG.paymentFields.vendor]) !== cleanVendor(poVendor)) vendorMismatch = true;
+        if(p[CONFIG.paymentFields.project] && poProject && p[CONFIG.paymentFields.project] !== poProject) projectMismatch = true;
+        html += '<tr><td>' + (p[CONFIG.paymentFields.date] || "—") + '</td><td>' + (p[CONFIG.paymentFields.vendor] || "—") + '</td><td>' + (p[CONFIG.paymentFields.project] || "—") + '</td><td>' + (p[CONFIG.paymentFields.paymentPercent] || "—") + '</td><td>' + fmtMoney(cleanAmount(p[CONFIG.paymentFields.payable]), meta.symbol) + '</td></tr>';
+      });
+      html += '</table>';
+      var diff = Math.abs(sum - poAmount);
+      var status = diff <= CONFIG.amountTolerance ? "ok" : (sum < poAmount ? "warn" : "bad");
+      html += '<div class="row" style="margin-top:8px;"><span class="k">Vendor consistent</span><span class="v">' + pill(vendorMismatch?"bad":"ok", vendorMismatch?"Differs":"OK") + '</span></div>';
+      html += '<div class="row"><span class="k">Project consistent</span><span class="v">' + pill(projectMismatch?"bad":"ok", projectMismatch?"Differs":"OK") + '</span></div>';
+      html += '<div class="row"><span class="k">Total Payable vs PO Sub Total</span><span class="v">' + pill(status) + ' &nbsp;diff ' + fmtMoney(diff, meta.symbol) + '</span></div>';
+      if(status === "warn"){
+        html += '<div class="note">Lower than the PO amount — expected if this is a partial/advance payment.</div>';
+      }
+    }
+    html += '</div>';
+  });
 
-  html += '<div class="card"><h2>Reconciliation</h2>';
-  html += '<div class="row"><span class="k">Vendor Name consistent</span><span class="v">' + pill(vendorMismatch ? "bad" : "ok") + '</span></div>';
-  html += '<div class="row"><span class="k">Project Code consistent</span><span class="v">' + pill(projectMismatch ? "bad" : "ok") + '</span></div>';
-  html += '<div class="row"><span class="k">Payable Amount vs PO Sub Total</span><span class="v">' + pill(amountStatus) + ' &nbsp; diff ' + fmtMoney(amountDiff) + '</span></div>';
-  if(amountStatus === "warn"){
-    html += '<div class="note">Payable total is less than the PO amount — this is expected if it\'s a partial/advance payment, not necessarily an error. Check Payment % above.</div>';
-  }
-  html += '</div>';
-
-  resultsEl.innerHTML = html;
+  out.innerHTML = html;
 }
 
-// Optional: confirm the widget is actually running inside Creator and can
-// resolve init params. Safe to remove once you've confirmed data calls work.
-if(window.ZOHO && ZOHO.CREATOR && ZOHO.CREATOR.UTIL && ZOHO.CREATOR.UTIL.getInitParams){
-  ZOHO.CREATOR.UTIL.getInitParams().catch(function(){ /* not fatal */ });
+/* -------------------- Import & Match tab -------------------- */
+var lastResults = [];
+
+function detectColumn(headers, keyword){
+  var idx = headers.findIndex(function(h){ return String(h).toLowerCase().indexOf(keyword) !== -1; });
+  return idx === -1 ? null : headers[idx];
+}
+
+function parseFile(file){
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        var wb = XLSX.read(e.target.result, { type: "array" });
+        var sheet = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        resolve(rows);
+      } catch(err){ reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function processImport(){
+  var fileInput = document.getElementById("fileInput");
+  var file = fileInput.files[0];
+  if(!file){ document.getElementById("fileStatus").textContent = "Choose a file first."; return; }
+
+  document.getElementById("processBtn").disabled = true;
+  document.getElementById("fileStatus").textContent = "Reading file…";
+  document.getElementById("bulkResultsCard").style.display = "block";
+  document.getElementById("bulkResults").innerHTML = '<div class="empty">Reading and matching — this checks each row against Creator, so a large file will take a little while.</div>';
+
+  parseFile(file).then(function(rows){
+    if(rows.length === 0){ throw new Error("No rows found in the file."); }
+    var headers = Object.keys(rows[0]);
+    var poCol = detectColumn(headers, "po");
+    var vendorCol = detectColumn(headers, "vendor");
+    var amountCol = detectColumn(headers, "amount");
+    if(!poCol || !vendorCol || !amountCol){
+      throw new Error("Couldn't find PO / Vendor / Amount columns in the file headers: " + headers.join(", "));
+    }
+
+    var invoices = rows.map(function(r){
+      return { poNo: r[poCol], vendor: r[vendorCol], amountRaw: r[amountCol] };
+    });
+
+    document.getElementById("fileStatus").textContent = "Matching " + invoices.length + " row(s)…";
+
+    // process sequentially so we don't fire too many parallel calls at once
+    var results = [];
+    var chain = Promise.resolve();
+    invoices.forEach(function(inv){
+      chain = chain.then(function(){
+        return lookupPO(inv.poNo).then(function(result){
+          results.push(matchOne(inv, result));
+        });
+      });
+    });
+    return chain.then(function(){ return results; });
+  }).then(function(results){
+    lastResults = results;
+    renderBulk(results);
+    document.getElementById("fileStatus").textContent = "Done — " + results.length + " row(s) processed.";
+  }).catch(function(err){
+    document.getElementById("bulkResults").innerHTML = '<div class="empty">' + (err && err.message ? err.message : "Something went wrong reading that file.") + '</div>';
+    document.getElementById("fileStatus").textContent = "";
+  }).finally(function(){
+    document.getElementById("processBtn").disabled = false;
+  });
+}
+
+function matchOne(invoice, result){
+  var invAmount = cleanAmount(invoice.amountRaw);
+
+  if(!result.po){
+    return {
+      poNo: invoice.poNo, vendor: invoice.vendor, amount: invAmount,
+      status: "bad", statusLabel: "Not Found",
+      suggestion: "No PO with this number in Purchase Order Report — check for a typo, or confirm the PO has been created."
+    };
+  }
+
+  var po = result.po;
+  var poVendor = po[CONFIG.poFields.vendor];
+  var poProject = po[CONFIG.poFields.project];
+  var poAmount = cleanAmount(po[CONFIG.poFields.amount]);
+  var vendorOK = cleanVendor(invoice.vendor) === cleanVendor(poVendor);
+
+  // prefer comparing against Payable Amount from requisitions (same currency
+  // groups kept separate — the first group with rows wins) if any exist yet,
+  // otherwise fall back to the PO Sub Total.
+  var target = poAmount, targetLabel = "PO Sub Total", symbol = "₹";
+  var group = result.paymentGroups.find(function(g){ return g.rows.length > 0; });
+  if(group){
+    target = group.rows.reduce(function(sum, p){ return sum + cleanAmount(p[CONFIG.paymentFields.payable]); }, 0);
+    targetLabel = "Payable Amount (" + group.meta.currencyLabel + ")";
+    symbol = group.meta.symbol;
+  }
+
+  var diff = Math.abs(invAmount - target);
+  var amountOK = diff <= CONFIG.amountTolerance;
+
+  var suggestions = [];
+  if(!vendorOK) suggestions.push('Vendor differs — PO/requisition shows "' + poVendor + '".');
+  if(!amountOK) suggestions.push("Amount differs from " + targetLabel + " by " + fmtMoney(diff, symbol) + ".");
+
+  var status = (vendorOK && amountOK) ? "ok" : "bad";
+  return {
+    poNo: invoice.poNo, vendor: invoice.vendor, amount: invAmount,
+    poVendor: poVendor, poProject: poProject, target: target, targetLabel: targetLabel, symbol: symbol,
+    status: status, statusLabel: status === "ok" ? "Matched" : "Mismatch",
+    suggestion: suggestions.length ? suggestions.join(" ") : "All good — no changes needed."
+  };
+}
+
+function renderBulk(results){
+  var out = document.getElementById("bulkResults");
+  var html = '<table><tr><th>PO No</th><th>Vendor (file)</th><th>Amount (file)</th><th>Compared to</th><th>Status</th><th>Suggestion</th></tr>';
+  results.forEach(function(r){
+    html += '<tr>';
+    html += '<td>' + (r.poNo || "—") + '</td>';
+    html += '<td>' + (r.vendor || "—") + '</td>';
+    html += '<td>' + fmtMoney(r.amount) + '</td>';
+    html += '<td>' + (r.targetLabel ? r.targetLabel + ": " + fmtMoney(r.target, r.symbol) : "—") + '</td>';
+    html += '<td>' + pill(r.status, r.statusLabel) + '</td>';
+    html += '<td class="suggestion">' + r.suggestion + '</td>';
+    html += '</tr>';
+  });
+  html += '</table>';
+  out.innerHTML = html;
+}
+
+function exportResults(){
+  if(!lastResults.length){ return; }
+  var header = ["PO No","Vendor (file)","Amount (file)","Compared To","Compared Amount","Status","Suggestion"];
+  var lines = [header.join(",")];
+  lastResults.forEach(function(r){
+    var row = [r.poNo, r.vendor, r.amount, r.targetLabel || "", r.target || "", r.statusLabel, '"' + (r.suggestion||"").replace(/"/g,'""') + '"'];
+    lines.push(row.join(","));
+  });
+  var blob = new Blob([lines.join("\n")], { type: "text/csv" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "po-reconciliation-results.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 </script>
 </body>
