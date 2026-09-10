@@ -90,6 +90,15 @@
       <div id="bulkResults"></div>
     </div>
   </div>
+
+  <div class="card">
+    <h2>Connection diagnostics</h2>
+    <div class="note" style="margin-top:0;">If every row comes back "Not Found" — even one you know exists — the field/report names in CONFIG are the usual cause, not the data. This fetches one real record with no filtering at all, so you can see its actual field names and compare them to CONFIG.</div>
+    <div class="import-row">
+      <button class="ghost" onclick="runDiagnostics()">Check connection &amp; field names</button>
+    </div>
+    <div id="diagOut"></div>
+  </div>
 </div>
 
 <script>
@@ -122,7 +131,7 @@ const CONFIG = {
     poNo: "PO_No",
     vendor: "Vendor_Name",
     project: "Project_Code",
-    payable: "Payable_Amount",
+    eligiblePayment: "Eligible_Payment",   // matched against this now, not Payable Amount
     paymentPercent: "Payment_Percentage",
     date: "Payment_Request_Date"
   },
@@ -133,8 +142,17 @@ const CONFIG = {
 
 function cleanAmount(raw){
   if(raw === null || raw === undefined) return 0;
-  var stripped = String(raw).replace(/[^0-9.]/g, "");
-  return stripped === "" ? 0 : parseFloat(stripped);
+  var s = String(raw);
+  s = s.replace(/[a-zA-Z₹$€£]/g, "");   // drop currency words/symbols (Rs, INR, USD, ₹...)
+  s = s.replace(/,/g, "");                // drop thousands separators
+  s = s.replace(/[^0-9.]/g, "");           // drop everything left except digits and dots
+  var parts = s.split(".");
+  if(parts.length > 2){
+    // more than one "." left (e.g. from "Rs." touching the number) — treat only
+    // the LAST one as the real decimal point
+    s = parts.slice(0, -1).join("") + "." + parts[parts.length - 1];
+  }
+  return (s === "" || s === ".") ? 0 : parseFloat(s);
 }
 function cleanVendor(raw){
   return String(raw || "").trim().toUpperCase().replace(/[.,]/g, "").replace(/\s+/g, " ");
@@ -168,16 +186,26 @@ function lookupPO(poNoRaw){
     var criteria = '(' + CONFIG.paymentFields.poNo + ' == "' + cleaned + '")';
     return ZOHO.CREATOR.DATA.getRecords({ app_name: CONFIG.appName, report_name: pr.reportName, criteria: criteria })
       .then(function(res){ return { meta: pr, rows: (res && res.data) || [] }; })
-      .catch(function(){ return { meta: pr, rows: [] }; });
+      .catch(function(){ return { meta: pr, rows: [] }; }); // a broken payment-report name just means "no requisitions found" — not fatal
   });
 
+  // The PO lookup is the one failure we can't afford to swallow silently:
+  // if appName / poReport / poFields.poNo is wrong, EVERY row would otherwise
+  // look identical to a genuine "PO doesn't exist." So keep the real error.
+  var poError = null;
   return Promise.all([
-    ZOHO.CREATOR.DATA.getRecords(poConfig).catch(function(){ return { data: [] }; }),
+    ZOHO.CREATOR.DATA.getRecords(poConfig).catch(function(err){ poError = err; return { data: [] }; }),
     Promise.all(paymentCalls)
   ]).then(function(r){
     var poRows = (r[0] && r[0].data) || [];
-    return { po: poRows[0] || null, paymentGroups: r[1] };
+    return { po: poRows[0] || null, paymentGroups: r[1], poError: poError };
   });
+}
+
+function describeError(err){
+  if(!err) return "Unknown error.";
+  if(typeof err === "string") return err;
+  return err.message || err.description || JSON.stringify(err);
 }
 
 /* -------------------- Quick Check tab -------------------- */
@@ -200,6 +228,11 @@ function runQuickCheck(){
 
 function renderQuick(poNoRaw, result){
   var out = document.getElementById("quickResults");
+  if(result.poError){
+    out.innerHTML = '<div class="card"><div class="row"><span class="k">Result</span><span class="v">' + pill("warn","Config error") + '</span></div>'
+      + '<div class="note">The lookup itself failed — this is different from "PO not found." Check appName / poReport / poFields.poNo in CONFIG against your app.<br><br><b>Raw error:</b> ' + describeError(result.poError) + '</div></div>';
+    return;
+  }
   if(!result.po){
     out.innerHTML = '<div class="card"><div class="row"><span class="k">Result</span><span class="v">' + pill("bad","No PO found") + '</span></div></div>';
     return;
@@ -223,19 +256,19 @@ function renderQuick(poNoRaw, result){
       html += '<div class="empty">None in this currency.</div>';
     } else {
       var sum = 0, vendorMismatch = false, projectMismatch = false;
-      html += '<table><tr><th>Date</th><th>Vendor</th><th>Project</th><th>Payment %</th><th>Payable</th></tr>';
+      html += '<table><tr><th>Date</th><th>Vendor</th><th>Project</th><th>Payment %</th><th>Eligible Payment</th></tr>';
       rows.forEach(function(p){
-        sum += cleanAmount(p[CONFIG.paymentFields.payable]);
+        sum += cleanAmount(p[CONFIG.paymentFields.eligiblePayment]);
         if(cleanVendor(p[CONFIG.paymentFields.vendor]) !== cleanVendor(poVendor)) vendorMismatch = true;
         if(p[CONFIG.paymentFields.project] && poProject && p[CONFIG.paymentFields.project] !== poProject) projectMismatch = true;
-        html += '<tr><td>' + (p[CONFIG.paymentFields.date] || "—") + '</td><td>' + (p[CONFIG.paymentFields.vendor] || "—") + '</td><td>' + (p[CONFIG.paymentFields.project] || "—") + '</td><td>' + (p[CONFIG.paymentFields.paymentPercent] || "—") + '</td><td>' + fmtMoney(cleanAmount(p[CONFIG.paymentFields.payable]), meta.symbol) + '</td></tr>';
+        html += '<tr><td>' + (p[CONFIG.paymentFields.date] || "—") + '</td><td>' + (p[CONFIG.paymentFields.vendor] || "—") + '</td><td>' + (p[CONFIG.paymentFields.project] || "—") + '</td><td>' + (p[CONFIG.paymentFields.paymentPercent] || "—") + '</td><td>' + fmtMoney(cleanAmount(p[CONFIG.paymentFields.eligiblePayment]), meta.symbol) + '</td></tr>';
       });
       html += '</table>';
       var diff = Math.abs(sum - poAmount);
       var status = diff <= CONFIG.amountTolerance ? "ok" : (sum < poAmount ? "warn" : "bad");
       html += '<div class="row" style="margin-top:8px;"><span class="k">Vendor consistent</span><span class="v">' + pill(vendorMismatch?"bad":"ok", vendorMismatch?"Differs":"OK") + '</span></div>';
       html += '<div class="row"><span class="k">Project consistent</span><span class="v">' + pill(projectMismatch?"bad":"ok", projectMismatch?"Differs":"OK") + '</span></div>';
-      html += '<div class="row"><span class="k">Total Payable vs PO Sub Total</span><span class="v">' + pill(status) + ' &nbsp;diff ' + fmtMoney(diff, meta.symbol) + '</span></div>';
+      html += '<div class="row"><span class="k">Total Eligible Payment vs PO Sub Total</span><span class="v">' + pill(status) + ' &nbsp;diff ' + fmtMoney(diff, meta.symbol) + '</span></div>';
       if(status === "warn"){
         html += '<div class="note">Lower than the PO amount — expected if this is a partial/advance payment.</div>';
       }
@@ -322,6 +355,14 @@ function processImport(){
 function matchOne(invoice, result){
   var invAmount = cleanAmount(invoice.amountRaw);
 
+  if(result.poError){
+    return {
+      poNo: invoice.poNo, vendor: invoice.vendor, amount: invAmount,
+      status: "warn", statusLabel: "Config Error",
+      suggestion: "The lookup itself failed (not a real \"not found\") — check appName/poReport/poFields.poNo in CONFIG. Raw error: " + describeError(result.poError)
+    };
+  }
+
   if(!result.po){
     return {
       poNo: invoice.poNo, vendor: invoice.vendor, amount: invAmount,
@@ -336,14 +377,14 @@ function matchOne(invoice, result){
   var poAmount = cleanAmount(po[CONFIG.poFields.amount]);
   var vendorOK = cleanVendor(invoice.vendor) === cleanVendor(poVendor);
 
-  // prefer comparing against Payable Amount from requisitions (same currency
+  // prefer comparing against Eligible Payment from requisitions (same currency
   // groups kept separate — the first group with rows wins) if any exist yet,
   // otherwise fall back to the PO Sub Total.
   var target = poAmount, targetLabel = "PO Sub Total", symbol = "₹";
   var group = result.paymentGroups.find(function(g){ return g.rows.length > 0; });
   if(group){
-    target = group.rows.reduce(function(sum, p){ return sum + cleanAmount(p[CONFIG.paymentFields.payable]); }, 0);
-    targetLabel = "Payable Amount (" + group.meta.currencyLabel + ")";
+    target = group.rows.reduce(function(sum, p){ return sum + cleanAmount(p[CONFIG.paymentFields.eligiblePayment]); }, 0);
+    targetLabel = "Eligible Payment (" + group.meta.currencyLabel + ")";
     symbol = group.meta.symbol;
   }
 
@@ -378,6 +419,48 @@ function renderBulk(results){
   });
   html += '</table>';
   out.innerHTML = html;
+}
+
+/* -------------------- Diagnostics -------------------- */
+function checkOneReport(reportName, configured, label){
+  return ZOHO.CREATOR.DATA.getRecords({ app_name: CONFIG.appName, report_name: reportName, max_records: 1 })
+    .then(function(res){
+      var rows = (res && res.data) || [];
+      if(rows.length === 0){
+        return '<div class="note"><b>' + label + ':</b> connected, but got zero records back. app/report name is probably right, but the report may be empty or permissioned so this widget can\'t see rows.</div>';
+      }
+      var actualFields = Object.keys(rows[0]).filter(function(k){ return k.indexOf("_") !== 0 && k !== "ID"; });
+      var html = '<div class="note" style="margin-top:14px;"><b>' + label + '</b> (report: ' + reportName + ') — real field names on that record:</div>';
+      html += '<table style="margin-top:6px;"><tr><th>Field name Creator returned</th><th>Sample value</th><th>In CONFIG?</th></tr>';
+      actualFields.forEach(function(f){
+        var inConfig = configured.indexOf(f) !== -1;
+        html += '<tr><td>' + f + '</td><td>' + String(rows[0][f]).slice(0,40) + '</td><td>' + (inConfig ? pill("ok","yes") : pill("warn","not used")) + '</td></tr>';
+      });
+      html += '</table>';
+      var missing = configured.filter(function(c){ return actualFields.indexOf(c) === -1; });
+      if(missing.length){
+        html += '<div class="note" style="margin-top:8px;"><b>These CONFIG values don\'t match any real field name above — fix these:</b> ' + missing.join(", ") + '</div>';
+      }
+      return html;
+    })
+    .catch(function(err){
+      return '<div class="note"><b>' + label + ':</b> couldn\'t connect at all — appName or this report\'s name itself is likely wrong, or this widget can\'t read it.<br><b>Raw error:</b> ' + describeError(err) + '</div>';
+    });
+}
+
+function runDiagnostics(){
+  var out = document.getElementById("diagOut");
+  out.innerHTML = '<div class="empty">Checking…</div>';
+
+  var poConfigured = [CONFIG.poFields.poNo, CONFIG.poFields.vendor, CONFIG.poFields.project, CONFIG.poFields.amount];
+  var payConfigured = [CONFIG.paymentFields.poNo, CONFIG.paymentFields.vendor, CONFIG.paymentFields.project, CONFIG.paymentFields.eligiblePayment, CONFIG.paymentFields.paymentPercent, CONFIG.paymentFields.date];
+
+  Promise.all([
+    checkOneReport(CONFIG.poReport, poConfigured, "Purchase Order Report"),
+    checkOneReport(CONFIG.paymentReports[0].reportName, payConfigured, "Payment Requisitions — " + CONFIG.paymentReports[0].currencyLabel)
+  ]).then(function(parts){
+    out.innerHTML = parts.join("");
+  });
 }
 
 function exportResults(){
