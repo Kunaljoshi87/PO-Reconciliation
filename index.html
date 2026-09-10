@@ -1,0 +1,226 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>PO Reconciliation Widget</title>
+<script src="https://static.zohocdn.com/creator/widgets/version/2.0/widgetsdk-min.js"></script>
+<style>
+  :root{
+    --bg:#F5F3EE; --surface:#fff; --border:#DCD6C8; --ink:#1E2A32; --muted:#5B6B76;
+    --accent:#2B6CB0; --accent-soft:#DCE7F2;
+    --ok:#2F7D4F; --ok-bg:#E1F0E5;
+    --warn:#B36A1D; --warn-bg:#F5E8D6;
+    --bad:#A8433F; --bad-bg:#F3DEDC;
+    --neutral:#5B6472; --neutral-bg:#E7E5DF;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--ink); padding:20px; }
+  .wrap{ max-width:900px; margin:0 auto; }
+  h1{ font-size:19px; margin:0 0 4px; }
+  .sub{ color:var(--muted); font-size:13.5px; margin-bottom:18px; }
+  .search{ display:flex; gap:8px; margin-bottom:20px; }
+  .search input{ flex:1; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; }
+  .search button{ padding:10px 18px; border:none; border-radius:8px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; font-size:14px; }
+  .search button:disabled{ opacity:0.5; cursor:default; }
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; margin-bottom:14px; }
+  .card h2{ font-size:13px; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); margin:0 0 12px; }
+  .row{ display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid #EFEAE0; font-size:14.5px; }
+  .row:last-child{ border-bottom:none; }
+  .row .k{ color:var(--muted); }
+  .row .v{ font-weight:600; text-align:right; }
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  th,td{ text-align:left; padding:8px 10px; border-bottom:1px solid #EFEAE0; }
+  th{ color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; }
+  .pill{ display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; }
+  .pill.ok{ background:var(--ok-bg); color:var(--ok); }
+  .pill.warn{ background:var(--warn-bg); color:var(--warn); }
+  .pill.bad{ background:var(--bad-bg); color:var(--bad); }
+  .pill.neutral{ background:var(--neutral-bg); color:var(--neutral); }
+  .verdict{ display:flex; align-items:center; gap:10px; font-size:16px; font-weight:700; }
+  .note{ font-size:13.5px; color:var(--muted); margin-top:8px; }
+  .empty{ color:var(--muted); font-size:14px; padding:20px 0; text-align:center; }
+  .actions{ display:flex; justify-content:flex-end; margin-top:6px; }
+  .actions button{ padding:8px 14px; border:1px solid var(--border); background:var(--surface); border-radius:7px; cursor:pointer; font-size:13px; }
+  .actions button:hover{ background:var(--accent-soft); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>PO Reconciliation</h1>
+  <div class="sub">Checks Vendor Name, Project Code, and Amount across the Purchase Order Report and Payment Requisitions.</div>
+
+  <div class="search">
+    <input id="poInput" placeholder="Enter a PO No (or part of it, e.g. 13-1176)" />
+    <button id="searchBtn" onclick="runReconciliation()">Check</button>
+  </div>
+
+  <div id="results"></div>
+</div>
+
+<script>
+/* ======================= EDIT THIS SECTION FOR YOUR APP =======================
+   Every name below is a Creator "link name", not the display label you see in
+   the report. Find the real link name by opening the field in the Form/Report
+   builder — its Link Name is shown in the field properties panel on the right.
+   The values here are best guesses from the report screenshots; confirm each
+   one before relying on this. */
+const CONFIG = {
+  appName: "mega-engineering-sales",
+
+  poReport: "Purchase_Order_Report",
+  poFields: {
+    poNo: "PO_No",
+    vendor: "Vendor_Name",
+    project: "Project_Code",
+    amount: "Sub_Total"            // the "Sub Total (₹)" column
+  },
+
+  paymentReport: "All_Payment_Requisitions_INR",
+  paymentFields: {
+    poNo: "PO_No",                 // whatever field the "PO No contains" search box uses
+    vendor: "Vendor_Name",
+    payable: "Payable_Amount",
+    paymentPercent: "Payment_Percentage"
+  },
+
+  amountTolerance: 1               // rupees — treat rounding this small as a match
+};
+/* ================================================================================ */
+
+function cleanAmount(raw){
+  if(raw === null || raw === undefined) return 0;
+  var stripped = String(raw).replace(/[^0-9.]/g, "");
+  return stripped === "" ? 0 : parseFloat(stripped);
+}
+
+function cleanVendor(raw){
+  return String(raw || "").trim().toUpperCase().replace(/[.,]/g, "").replace(/\s+/g, " ");
+}
+
+// PO numbers look like MEPPL-2526-20015A-13-411 — the project code is the
+// 3rd dash-separated segment. Adjust this if your PO format differs.
+function projectFromPO(poNo){
+  var parts = String(poNo || "").split("-");
+  return parts.length >= 3 ? parts[2].toUpperCase() : "";
+}
+
+function pill(status){
+  var map = { ok: ["ok","Match"], warn: ["warn","Check"], bad: ["bad","Mismatch"], neutral: ["neutral","—"] };
+  var m = map[status] || map.neutral;
+  return '<span class="pill ' + m[0] + '">' + m[1] + '</span>';
+}
+
+function fmtMoney(n){
+  return "₹" + Number(n).toLocaleString("en-IN", {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function runReconciliation(){
+  var poNoRaw = document.getElementById("poInput").value.trim();
+  var resultsEl = document.getElementById("results");
+  if(!poNoRaw){
+    resultsEl.innerHTML = '<div class="empty">Enter a PO No to check.</div>';
+    return;
+  }
+
+  document.getElementById("searchBtn").disabled = true;
+  resultsEl.innerHTML = '<div class="empty">Looking up records…</div>';
+
+  var poCriteria = '(' + CONFIG.poFields.poNo + ' == "' + poNoRaw + '")';
+  var poConfig = { app_name: CONFIG.appName, report_name: CONFIG.poReport, criteria: poCriteria };
+
+  var payCriteria = '(' + CONFIG.paymentFields.poNo + ' == "' + poNoRaw + '")';
+  var payConfig = { app_name: CONFIG.appName, report_name: CONFIG.paymentReport, criteria: payCriteria };
+
+  Promise.all([
+    ZOHO.CREATOR.DATA.getRecords(poConfig),
+    ZOHO.CREATOR.DATA.getRecords(payConfig)
+  ]).then(function(resArr){
+    var poRows = (resArr[0] && resArr[0].data) || [];
+    var payRows = (resArr[1] && resArr[1].data) || [];
+    render(poNoRaw, poRows, payRows);
+  }).catch(function(err){
+    resultsEl.innerHTML = '<div class="empty">Could not reach Creator data — check the app/report names in CONFIG, and that this page is being viewed inside the Creator widget.<br><br>' + (err && err.message ? err.message : JSON.stringify(err)) + '</div>';
+  }).finally(function(){
+    document.getElementById("searchBtn").disabled = false;
+  });
+}
+
+function render(poNoRaw, poRows, payRows){
+  var resultsEl = document.getElementById("results");
+
+  if(poRows.length === 0){
+    resultsEl.innerHTML = '<div class="card"><div class="verdict">' + pill("bad") + ' No PO found matching "' + poNoRaw + '" in the Purchase Order Report.</div></div>';
+    return;
+  }
+
+  var po = poRows[0];
+  var poVendor = po[CONFIG.poFields.vendor];
+  var poProject = po[CONFIG.poFields.project] || projectFromPO(po[CONFIG.poFields.poNo]);
+  var poAmount = cleanAmount(po[CONFIG.poFields.amount]);
+
+  var payableSum = 0;
+  var vendorMismatch = false;
+  var projectMismatch = false;
+
+  payRows.forEach(function(p){
+    payableSum += cleanAmount(p[CONFIG.paymentFields.payable]);
+    if(cleanVendor(p[CONFIG.paymentFields.vendor]) !== cleanVendor(poVendor)) vendorMismatch = true;
+    var pProject = projectFromPO(p[CONFIG.paymentFields.poNo]);
+    if(pProject && poProject && pProject !== poProject) projectMismatch = true;
+  });
+
+  var amountDiff = Math.abs(payableSum - poAmount);
+  var isFullyPaid = payRows.some(function(p){ return cleanAmount(p[CONFIG.paymentFields.paymentPercent]) >= 100; }) || payRows.length > 0;
+  var amountStatus = "neutral";
+  if(payRows.length === 0){
+    amountStatus = "neutral";
+  } else if(amountDiff <= CONFIG.amountTolerance){
+    amountStatus = "ok";
+  } else if(payableSum < poAmount){
+    amountStatus = "warn"; // could just be a partial/advance payment, not necessarily wrong
+  } else {
+    amountStatus = "bad"; // paid more than the PO — worth a look regardless
+  }
+
+  var html = "";
+
+  html += '<div class="card"><h2>Purchase Order</h2>';
+  html += '<div class="row"><span class="k">PO No</span><span class="v">' + (po[CONFIG.poFields.poNo] || "—") + '</span></div>';
+  html += '<div class="row"><span class="k">Vendor Name</span><span class="v">' + (poVendor || "—") + '</span></div>';
+  html += '<div class="row"><span class="k">Project Code</span><span class="v">' + (poProject || "—") + '</span></div>';
+  html += '<div class="row"><span class="k">Sub Total</span><span class="v">' + fmtMoney(poAmount) + '</span></div>';
+  html += '</div>';
+
+  html += '<div class="card"><h2>Payment Requisitions (' + payRows.length + ')</h2>';
+  if(payRows.length === 0){
+    html += '<div class="empty">No payment requisitions raised yet for this PO.</div>';
+  } else {
+    html += '<table><tr><th>Date</th><th>Vendor</th><th>Payment %</th><th>Payable Amount</th></tr>';
+    payRows.forEach(function(p){
+      html += '<tr><td>' + (p.Payment_Request_Date || "—") + '</td><td>' + (p[CONFIG.paymentFields.vendor] || "—") + '</td><td>' + (p[CONFIG.paymentFields.paymentPercent] || "—") + '</td><td>' + fmtMoney(cleanAmount(p[CONFIG.paymentFields.payable])) + '</td></tr>';
+    });
+    html += '</table>';
+    html += '<div class="row" style="margin-top:8px;"><span class="k">Total Payable (all requisitions)</span><span class="v">' + fmtMoney(payableSum) + '</span></div>';
+  }
+  html += '</div>';
+
+  html += '<div class="card"><h2>Reconciliation</h2>';
+  html += '<div class="row"><span class="k">Vendor Name consistent</span><span class="v">' + pill(vendorMismatch ? "bad" : "ok") + '</span></div>';
+  html += '<div class="row"><span class="k">Project Code consistent</span><span class="v">' + pill(projectMismatch ? "bad" : "ok") + '</span></div>';
+  html += '<div class="row"><span class="k">Payable Amount vs PO Sub Total</span><span class="v">' + pill(amountStatus) + ' &nbsp; diff ' + fmtMoney(amountDiff) + '</span></div>';
+  if(amountStatus === "warn"){
+    html += '<div class="note">Payable total is less than the PO amount — this is expected if it\'s a partial/advance payment, not necessarily an error. Check Payment % above.</div>';
+  }
+  html += '</div>';
+
+  resultsEl.innerHTML = html;
+}
+
+// Optional: confirm the widget is actually running inside Creator and can
+// resolve init params. Safe to remove once you've confirmed data calls work.
+if(window.ZOHO && ZOHO.CREATOR && ZOHO.CREATOR.UTIL && ZOHO.CREATOR.UTIL.getInitParams){
+  ZOHO.CREATOR.UTIL.getInitParams().catch(function(){ /* not fatal */ });
+}
+</script>
+</body>
+</html>
