@@ -462,9 +462,9 @@ const CONFIG = {
   // No record will be created if there is no existing Payment_detals2 record.
   allowCreatePaymentDetail: true,
 
-  // Creator-safe write settings.
-  // "Matched" must exist as an exact choice in Reconciliation_Status.
-  acceptedReconciliationStatus: "Matched",
+  // Reconciliation_Status is intentionally not written by the widget
+  // until the exact Creator choice values are confirmed.
+  acceptedReconciliationStatus: "",
 
   // Your Amount_Difference field visually supports about ##,###,###.##
   // (7 integer digits + 2 decimals). If a difference is larger than this,
@@ -1671,11 +1671,12 @@ async function createPaymentDetail(result){
   data[f.differencePercentage]=round2(c.diffPct||0);
   data[f.matchScore]=Number(c.score||0);
 
-  // Once the user explicitly clicks Accept, the created payment record is a
-  // confirmed match. This avoids passing non-configured dropdown values such
-  // as "Suggested Match" into Reconciliation_Status.
-  data[f.reconciliationStatus]=CONFIG.acceptedReconciliationStatus;
-
+  // IMPORTANT:
+  // Do not write Reconciliation_Status here.
+  // Creator is rejecting the value because the field's configured choice
+  // values do not match the widget text. The original widget classification
+  // is preserved in Match_Remarks. Once the exact Creator dropdown choices
+  // are confirmed, this can be mapped safely.
   data[f.reconciledOn]=dateTimeForCreator();
 
   const remarks=[
