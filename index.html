@@ -705,8 +705,23 @@ function readWorkbook(file){
     reader.onload=e=>{
       try{
         const wb=XLSX.read(e.target.result,{type:"array",cellDates:true});
-        const sh=wb.Sheets[wb.SheetNames[0]];
-        resolve(XLSX.utils.sheet_to_json(sh,{defval:"",raw:false}));
+
+        // Read sheets as raw row arrays first. This lets us handle Excel files
+        // that contain blank rows, report titles, merged headings, logos, etc.
+        // above the real table header.
+        const sheets=[];
+        wb.SheetNames.forEach(name=>{
+          const sh=wb.Sheets[name];
+          const rawRows=XLSX.utils.sheet_to_json(sh,{
+            header:1,
+            defval:"",
+            raw:false,
+            blankrows:false
+          });
+          sheets.push({name,rows:rawRows});
+        });
+
+        resolve(sheets);
       }catch(err){reject(err)}
     };
     reader.onerror=reject;
@@ -730,8 +745,116 @@ function detectColumn(headers,candidates){
   return null;
 }
 
+function headerSignal(row){
+  const cells=(row||[]).map(c=>canonicalHeader(c)).filter(Boolean);
+  if(!cells.length) return 0;
+
+  const has = words => cells.some(c=>words.some(w=>c===w || c.includes(w)));
+
+  let score=0;
+  if(has(["po no","po number","purchase order","po"])) score++;
+  if(has(["vendor name","vendor","supplier name","supplier"])) score++;
+  if(has(["eligible payment","eligible amount","payment amount","amount"])) score++;
+  if(has(["project code","project","project cod"])) score++;
+  return score;
+}
+
+function makeUniqueHeaders(row){
+  const used={};
+  return (row||[]).map((v,i)=>{
+    let h=String(v||"").trim();
+    if(!h) h="__EMPTY_"+i;
+    if(used[h]===undefined){
+      used[h]=0;
+      return h;
+    }
+    used[h]++;
+    return h+"_"+used[h];
+  });
+}
+
+function rawSheetToObjects(sheet){
+  const rows=sheet.rows||[];
+  if(!rows.length) return null;
+
+  // Look through the first 50 physical rows for the real header.
+  // We require PO + Vendor + Amount signals (score >= 3).
+  let headerIndex=-1;
+  let bestScore=-1;
+
+  for(let i=0;i<Math.min(rows.length,50);i++){
+    const score=headerSignal(rows[i]);
+    if(score>bestScore){
+      bestScore=score;
+      headerIndex=i;
+    }
+    if(score>=3){
+      headerIndex=i;
+      break;
+    }
+  }
+
+  if(headerIndex<0 || bestScore<3) return null;
+
+  const headers=makeUniqueHeaders(rows[headerIndex]);
+  const objects=[];
+
+  for(let r=headerIndex+1;r<rows.length;r++){
+    const arr=rows[r]||[];
+    const hasData=arr.some(v=>String(v??"").trim()!=="");
+    if(!hasData) continue;
+
+    const obj={};
+    headers.forEach((h,c)=>{
+      obj[h]=arr[c]===undefined?"":arr[c];
+    });
+    objects.push(obj);
+  }
+
+  return {
+    sheetName:sheet.name,
+    headerRow:headerIndex+1,
+    headers,
+    objects
+  };
+}
+
+function findBestImportTable(sheets){
+  let best=null;
+
+  for(const sheet of sheets){
+    const parsed=rawSheetToObjects(sheet);
+    if(!parsed) continue;
+
+    const headers=parsed.headers;
+    const poCol=detectColumn(headers,["po no","po number","purchase order","po"]);
+    const vendorCol=detectColumn(headers,["vendor name","vendor","supplier name","supplier"]);
+    const amountCol=detectColumn(headers,["eligible payment","eligible amount","payment amount","amount"]);
+
+    const score=(poCol?1:0)+(vendorCol?1:0)+(amountCol?1:0);
+    if(!best || score>best.score || (score===best.score && parsed.objects.length>best.parsed.objects.length)){
+      best={score,parsed};
+    }
+    if(score===3) break;
+  }
+
+  if(!best || best.score<3){
+    const sheetSummary=(sheets||[]).map(s=>{
+      const preview=(s.rows||[]).slice(0,8)
+        .map((r,i)=>`Row ${i+1}: ${(r||[]).filter(v=>String(v??"").trim()!=="").slice(0,8).join(" | ")}`)
+        .join("\n");
+      return `Sheet "${s.name}"\n${preview}`;
+    }).join("\n\n");
+    throw new Error(
+      "Could not locate the real header row automatically. The file must contain PO No, Vendor Name and Eligible Payment/Amount columns.\n\nFirst rows detected:\n"+sheetSummary
+    );
+  }
+
+  return best.parsed;
+}
+
 function parseImportedRows(rows){
-  if(!rows.length) throw new Error("No data rows were found.");
+  if(!rows.length) throw new Error("No data rows were found below the detected header.");
   const headers=Object.keys(rows[0]);
 
   const poCol=detectColumn(headers,["po no","po number","purchase order","po"]);
@@ -742,13 +865,13 @@ function parseImportedRows(rows){
   const typeCol=detectColumn(headers,["payment type","type"]);
 
   if(!poCol || !vendorCol || !amountCol){
-    throw new Error("Required columns were not detected. Need PO No, Vendor Name and Eligible Payment/Amount. Found headers: "+headers.join(", "));
+    throw new Error("Required columns were not detected after finding the header row. Need PO No, Vendor Name and Eligible Payment/Amount. Found headers: "+headers.join(", "));
   }
 
   return rows
     .filter(r=>String(r[poCol]??"").trim()!=="")
     .map((r,i)=>({
-      rowNo:i+2,
+      rowNo:i+1,
       project:projectCol?r[projectCol]:"",
       po:r[poCol],
       vendor:r[vendorCol],
@@ -769,9 +892,14 @@ async function processCurrentFile(){
   try{
     document.getElementById("processBtn").disabled=true;
     setProgress(12,"Reading Excel / CSV...",true);
-    const rows=await readWorkbook(STATE.currentFile);
-    setProgress(35,`Detected ${rows.length} file row(s). Mapping columns...`,true);
-    STATE.importedRows=parseImportedRows(rows);
+    const sheets=await readWorkbook(STATE.currentFile);
+    const table=findBestImportTable(sheets);
+    setProgress(
+      35,
+      `Using sheet "${table.sheetName}", header row ${table.headerRow}. Detected ${table.objects.length} data row(s)...`,
+      true
+    );
+    STATE.importedRows=parseImportedRows(table.objects);
 
     setProgress(58,"Comparing with Payment Requisition records...",true);
     await new Promise(r=>setTimeout(r,30));
