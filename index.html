@@ -232,7 +232,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
     <div class="title-wrap">
       <div class="logo">PR</div>
       <div>
-        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v8</span></h1>
+        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v10</span></h1>
         <div class="subtitle">
           Upload an Excel/CSV payment list, compare each row with live Payment Requisition records,
           review exact and suggested matches, choose an alternate candidate when needed, and update
@@ -384,6 +384,9 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
         <b>Project Code</b><select id="mapProject" class="searchbox"></select>
         <b>Payment Date</b><select id="mapDate" class="searchbox"></select>
         <b>Payment Type</b><select id="mapType" class="searchbox"></select>
+        <b>Payment Record Date</b><select id="mapPaymentRecordDate" class="searchbox"></select>
+        <b>Bank Name</b><select id="mapBankName" class="searchbox"></select>
+        <b>Paid Through</b><select id="mapPaidThrough" class="searchbox"></select>
         <b>UTR No</b><select id="mapUTR" class="searchbox"></select>
         <b>Transaction ID</b><select id="mapTransactionId" class="searchbox"></select>
         <b>Account Number</b><select id="mapAccountNumber" class="searchbox"></select>
@@ -439,6 +442,8 @@ const CONFIG = {
     percentage: "Percentage",
     eligiblePayableAmount: "Eligible_Payable_Amount",
     paymentDone: "Payment_Done",
+    bankName: "Bank_Name",
+    paidThrough: "Paid_Through",
     utr: "UTR_No",
     transactionId: "Transaction_ID",
     accountNumber: "Account_Number",
@@ -494,6 +499,15 @@ const CONFIG = {
     ],
     type: [
       "payment type","type","payment category","category"
+    ],
+    paymentRecordDate: [
+      "payment record date","record date","bank payment date","payment done date","transaction date"
+    ],
+    bankName: [
+      "bank name","bank","paying bank","payment bank"
+    ],
+    paidThrough: [
+      "paid through","payment mode","mode of payment","payment method","paid by","mode"
     ],
     utr: [
       "utr no","utr","utr number","bank reference","bank ref","reference no",
@@ -997,6 +1011,9 @@ function parseImportedRows(rows){
   const projectCol=detectColumn(headers,CONFIG.importAliases.project);
   const dateCol=detectColumn(headers,CONFIG.importAliases.date);
   const typeCol=detectColumn(headers,CONFIG.importAliases.type);
+  const paymentRecordDateCol=detectColumn(headers,CONFIG.importAliases.paymentRecordDate);
+  const bankNameCol=detectColumn(headers,CONFIG.importAliases.bankName);
+  const paidThroughCol=detectColumn(headers,CONFIG.importAliases.paidThrough);
   const utrCol=detectColumn(headers,CONFIG.importAliases.utr);
   const transactionIdCol=detectColumn(headers,CONFIG.importAliases.transactionId);
   const accountNumberCol=detectColumn(headers,CONFIG.importAliases.accountNumber);
@@ -1035,6 +1052,9 @@ function parseImportedRows(rows){
       amount:cleanAmount(r[amountCol]),
       paymentDate:dateCol?r[dateCol]:"",
       paymentType:typeCol?r[typeCol]:"",
+      paymentRecordDate:paymentRecordDateCol?r[paymentRecordDateCol]:"",
+      bankName:bankNameCol?r[bankNameCol]:"",
+      paidThrough:paidThroughCol?r[paidThroughCol]:"",
       utr:utrCol?r[utrCol]:"",
       transactionId:transactionIdCol?r[transactionIdCol]:"",
       accountNumber:accountNumberCol?r[accountNumberCol]:"",
@@ -1132,7 +1152,7 @@ function openMapping(sheets){
     .concat(visibleHeaders.map(h=>`<option value="${htmlEscape(h)}">${htmlEscape(h)}</option>`))
     .join("");
 
-  ["mapPO","mapVendor","mapAmount","mapProject","mapDate","mapType","mapUTR","mapTransactionId","mapAccountNumber","mapChequeNo","mapRemark"].forEach(id=>{
+  ["mapPO","mapVendor","mapAmount","mapProject","mapDate","mapType","mapPaymentRecordDate","mapBankName","mapPaidThrough","mapUTR","mapTransactionId","mapAccountNumber","mapChequeNo","mapRemark"].forEach(id=>{
     document.getElementById(id).innerHTML=opts;
   });
 
@@ -1143,6 +1163,9 @@ function openMapping(sheets){
   document.getElementById("mapProject").value=detectColumn(headers,CONFIG.importAliases.project)||"";
   document.getElementById("mapDate").value=detectColumn(headers,CONFIG.importAliases.date)||"";
   document.getElementById("mapType").value=detectColumn(headers,CONFIG.importAliases.type)||"";
+  document.getElementById("mapPaymentRecordDate").value=detectColumn(headers,CONFIG.importAliases.paymentRecordDate)||"";
+  document.getElementById("mapBankName").value=detectColumn(headers,CONFIG.importAliases.bankName)||"";
+  document.getElementById("mapPaidThrough").value=detectColumn(headers,CONFIG.importAliases.paidThrough)||"";
   document.getElementById("mapUTR").value=detectColumn(headers,CONFIG.importAliases.utr)||"";
   document.getElementById("mapTransactionId").value=detectColumn(headers,CONFIG.importAliases.transactionId)||"";
   document.getElementById("mapAccountNumber").value=detectColumn(headers,CONFIG.importAliases.accountNumber)||"";
@@ -1169,6 +1192,9 @@ function applyManualMapping(){
   const projectCol=document.getElementById("mapProject").value;
   const dateCol=document.getElementById("mapDate").value;
   const typeCol=document.getElementById("mapType").value;
+  const paymentRecordDateCol=document.getElementById("mapPaymentRecordDate").value;
+  const bankNameCol=document.getElementById("mapBankName").value;
+  const paidThroughCol=document.getElementById("mapPaidThrough").value;
   const utrCol=document.getElementById("mapUTR").value;
   const transactionIdCol=document.getElementById("mapTransactionId").value;
   const accountNumberCol=document.getElementById("mapAccountNumber").value;
@@ -1196,6 +1222,14 @@ function applyManualMapping(){
         amount:cleanAmount(r[amountCol]),
         paymentDate:dateCol?r[dateCol]:"",
         paymentType:typeCol?r[typeCol]:"",
+        paymentRecordDate:paymentRecordDateCol?r[paymentRecordDateCol]:"",
+        bankName:bankNameCol?r[bankNameCol]:"",
+        paidThrough:paidThroughCol?r[paidThroughCol]:"",
+        utr:utrCol?r[utrCol]:"",
+        transactionId:transactionIdCol?r[transactionIdCol]:"",
+        accountNumber:accountNumberCol?r[accountNumberCol]:"",
+        chequeNo:chequeNoCol?r[chequeNoCol]:"",
+        remark:remarkCol?r[remarkCol]:"",
         source:r
       };
     });
@@ -1495,8 +1529,9 @@ function renderDrawerBody(){
 
     <div class="reason">
       <b>What happens on Accept:</b> a new record is created in <b>Payment_detals2</b>
-      and linked to the selected Payment Requisition. The uploaded bank amount becomes
-      <b>Payment Done</b>. UTR / Transaction ID are also saved when present in the file.
+      and linked to the selected Payment Requisition. The uploaded bank amount becomes <b>Payment Done</b>. When present in the Excel row,
+      Payment Record Date, Bank Name, Paid Through, Account Number, UTR No,
+      Transaction ID, Cheque No and Remark / Note are also passed to the new Payment Details record.
     </div>
   `;
 
@@ -1573,6 +1608,138 @@ function rejectCurrent(){
   toast("Match rejected. No Creator record was changed.");
 }
 
+
+/* ===================== CREATOR FIELD/FETCH HELPERS ========================= */
+function canonicalKey(v){
+  return String(v||"")
+    .toLowerCase()
+    .replace(/[₹$€£]/g,"")
+    .replace(/[^a-z0-9]+/g,"")
+    .trim();
+}
+
+function resolveExistingKey(record,candidates){
+  if(!record) return null;
+  const keys=Object.keys(record);
+  const wanted=(candidates||[]).map(canonicalKey);
+
+  for(const w of wanted){
+    const exact=keys.find(k=>canonicalKey(k)===w);
+    if(exact) return exact;
+  }
+  return null;
+}
+
+function creatorScalar(v){
+  if(v===null || v===undefined) return null;
+  if(typeof v==="object"){
+    if(v.ID!==undefined && v.ID!==null) return v.ID;
+    if(v.id!==undefined && v.id!==null) return v.id;
+    const s=valueText(v);
+    return s==="" ? null : s;
+  }
+  return v;
+}
+
+async function getFreshPaymentRequisitionById(id){
+  try{
+    if(ZOHO.CREATOR.DATA.getRecordById){
+      const res=await ZOHO.CREATOR.DATA.getRecordById({
+        app_name:CONFIG.appName,
+        report_name:CONFIG.paymentRequisitionReport,
+        id:String(id)
+      });
+      if(res && res.data) return res.data;
+    }
+  }catch(err){
+    console.warn("getRecordById failed; using cached Payment Requisition row.",err);
+  }
+
+  const cached=STATE.paymentRequisitions.find(r=>String(r.ID)===String(id));
+  return cached || null;
+}
+
+function putIfTargetExists(data,targetSample,targetAliases,value){
+  if(value===null || value===undefined || String(valueText(value)).trim()==="") return false;
+  const targetKey=resolveExistingKey(targetSample,targetAliases);
+  if(!targetKey) return false;
+  data[targetKey]=creatorScalar(value);
+  return true;
+}
+
+function copySameNamedFieldsFromPR(prRaw,targetSample,data){
+  if(!prRaw || !targetSample) return;
+
+  const blocked=new Set([
+    "id","addedtime","modifiedtime","addeduser","modifieduser",
+    "autonumber","recordtype","reconciliationstatus",
+    "paymentdetails","paymentdocument",
+    "amountdifference","differencepercentage","matchscore","matchremarks",
+    "reconciledon","importbatch","importedamount",
+    "utrno","transactionid","chequeno","accountnumber","bankname","paidthrough"
+  ]);
+
+  const targetKeys=Object.keys(targetSample);
+  for(const tk of targetKeys){
+    const ck=canonicalKey(tk);
+    if(blocked.has(ck)) continue;
+    if(data[tk]!==undefined) continue;
+
+    const sourceKey=Object.keys(prRaw).find(sk=>canonicalKey(sk)===ck);
+    if(!sourceKey) continue;
+
+    const value=prRaw[sourceKey];
+    if(value===null || value===undefined || String(valueText(value)).trim()==="") continue;
+    data[tk]=creatorScalar(value);
+  }
+}
+
+
+function representativeFieldValue(fieldName){
+  for(const rec of STATE.paymentDetails){
+    const v=rec ? rec[fieldName] : null;
+    if(v!==null && v!==undefined && String(valueText(v)).trim()!=="") return v;
+  }
+  return null;
+}
+
+function resolveChoiceOrLookupValue(fieldName, uploadedValue){
+  const rawText=String(uploadedValue??"").trim();
+  if(!rawText) return null;
+
+  const sample=representativeFieldValue(fieldName);
+
+  // Lookup field: resolve Excel display text to an existing Creator lookup ID.
+  if(sample && typeof sample==="object" && (sample.ID!==undefined || sample.id!==undefined)){
+    const wanted=canonicalHeader(rawText);
+    for(const rec of STATE.paymentDetails){
+      const v=rec ? rec[fieldName] : null;
+      if(!v || typeof v!=="object") continue;
+      if(canonicalHeader(valueText(v))===wanted){
+        return v.ID || v.id;
+      }
+    }
+    return null;
+  }
+
+  // Dropdown / radio / single-line: preserve Creator capitalization if known.
+  const wanted=canonicalHeader(rawText);
+  for(const rec of STATE.paymentDetails){
+    const v=rec ? rec[fieldName] : null;
+    const shown=valueText(v);
+    if(shown && canonicalHeader(shown)===wanted) return shown;
+  }
+
+  return rawText;
+}
+
+function todayForCreator(){
+  const d=new Date();
+  const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];
+  const pad=x=>String(x).padStart(2,"0");
+  return `${pad(d.getDate())}-${m}-${d.getFullYear()}`;
+}
+
 /* ======================= PAYMENT DETAILS CREATION =========================== */
 function firstRawValue(raw,names){
   for(const n of names){
@@ -1624,45 +1791,156 @@ async function createPaymentDetail(result){
     throw new Error(`${duplicate.reason} in Payment Details (record ${duplicate.record.id}). Record was not created again.`);
   }
 
-  const prRaw=c.rec.raw || {};
+  // Fetch the selected PR again at Accept time so we use the latest Creator data.
+  const prRaw=(await getFreshPaymentRequisitionById(c.rec.id)) || c.rec.raw || {};
   const f=CONFIG.paymentDetailsFields;
 
-  const poId=lookupId(prRaw[CONFIG.paymentRequisitionFields.po]);
-  const vendorId=lookupId(prRaw[CONFIG.paymentRequisitionFields.vendor]);
+  const targetSample=STATE.paymentDetails[0] || {};
+
+  // Required lookup IDs from Payment Requisition.
+  const poRaw=prRaw[CONFIG.paymentRequisitionFields.po];
+  const vendorRaw=prRaw[CONFIG.paymentRequisitionFields.vendor];
+  const poId=lookupId(poRaw);
+  const vendorId=lookupId(vendorRaw);
 
   if(!poId) throw new Error("Selected Payment Requisition did not return a PO lookup ID.");
   if(!vendorId) throw new Error("Selected Payment Requisition did not return a Vendor lookup ID.");
 
   const data={};
 
+  // -----------------------------------------------------------------------
+  // 1) CORE LINKAGES
+  // -----------------------------------------------------------------------
   data[f.paymentRequisition]=c.rec.id;
   data[f.po]=poId;
   data[f.vendor]=vendorId;
 
-  if(c.rec.requestDate) data[f.requestDate]=c.rec.requestDate;
-  if(c.rec.paymentType) data[f.paymentType]=c.rec.paymentType;
+  // -----------------------------------------------------------------------
+  // 2) COPY ALL SAME-LINK-NAME VALUES THAT EXIST IN BOTH FORMS
+  //    This automatically brings across direct PR details without having to
+  //    hard-code every current/future field.
+  // -----------------------------------------------------------------------
+  copySameNamedFieldsFromPR(prRaw,targetSample,data);
 
-  const basic=firstRawValue(prRaw,["Basic","Request_Basic_Amount","Subtotal","Sub_Total"]);
-  const approved=firstRawValue(prRaw,["Total","Approved_Amount","Payable_Amount"]);
-  const percent=firstRawValue(prRaw,["Payment_Percentage","Payment","Percentage"]);
+  // -----------------------------------------------------------------------
+  // 3) EXPLICIT COMMON PR -> PAYMENT DETAILS MAPPING
+  //    These alias lists cover common link-name differences between forms.
+  // -----------------------------------------------------------------------
+  putIfTargetExists(
+    data,targetSample,
+    ["Payment_Record_Date","PaymentRecordDate"],
+    String(result.inv.paymentRecordDate||"").trim() || todayForCreator()
+  );
 
-  if(basic!==null) data[f.requestBasicAmount]=cleanAmount(basic);
-  if(approved!==null) data[f.approvedAmount]=cleanAmount(approved);
-  if(percent!==null && String(valueText(percent)).trim()!=="") data[f.percentage]=cleanAmount(percent);
+  putIfTargetExists(
+    data,targetSample,
+    ["Payment_Request_Date","PaymentRequestDate"],
+    prRaw[CONFIG.paymentRequisitionFields.requestDate]
+  );
 
+  putIfTargetExists(
+    data,targetSample,
+    ["Payment_Type","PaymentType"],
+    prRaw[CONFIG.paymentRequisitionFields.paymentType]
+  );
+
+  putIfTargetExists(
+    data,targetSample,
+    ["Payment_Request_Status","PaymentRequestStatus"],
+    firstRawValue(prRaw,["Payment_Request_Status","Request_Status","Status"])
+  );
+
+  putIfTargetExists(
+    data,targetSample,
+    ["Currency_Name","Currency"],
+    firstRawValue(prRaw,["Currency_Name","Currency","Currency_Type"])
+  );
+
+  putIfTargetExists(
+    data,targetSample,
+    ["Request_Basic_Amount","Basic","Subtotal","Sub_Total"],
+    firstRawValue(prRaw,["Basic","Request_Basic_Amount","Subtotal","Sub_Total"])
+  );
+
+  putIfTargetExists(
+    data,targetSample,
+    ["Approved_Amount","Total","Payable_Amount"],
+    firstRawValue(prRaw,["Approved_Amount","Total","Payable_Amount"])
+  );
+
+  putIfTargetExists(
+    data,targetSample,
+    ["Percentage","Payment_Percentage","Payment"],
+    firstRawValue(prRaw,["Percentage","Payment_Percentage","Payment"])
+  );
+
+  // Direct tax / deduction / running values are copied when they actually
+  // exist in the selected Payment Requisition.
+  [
+    ["Running_IGST",["Running_IGST","IGST"]],
+    ["Running_CGST",["Running_CGST","CGST"]],
+    ["Running_SGST",["Running_SGST","SGST"]],
+    ["Running_Total",["Running_Total"]],
+    ["Deduction_from_Advance",["Deduction_from_Advance","Deduction_From_Advance"]],
+    ["Deduction_From_Retention",["Deduction_From_Retention","Deduction_from_Retention"]],
+    ["Total_Deduction",["Total_Deduction"]],
+    ["Running_PO",["Running_PO"]],
+    ["Previous_Remaining_From_Request",["Previous_Remaining_From_Request"]],
+    ["Remaning_Against_PO",["Remaning_Against_PO","Remaining_Against_PO"]]
+  ].forEach(([targetAlias,sourceAliases])=>{
+    putIfTargetExists(data,targetSample,[targetAlias],firstRawValue(prRaw,sourceAliases));
+  });
+
+  // USD/direct alternate-currency values: only copied if Creator returns them.
+  [
+    [["Approved_Amount","Approved_Amount_USD","Approved_Amount_Dollar"],["Approved_Amount_USD","Approved_Amount_Dollar","Total_USD"]],
+    [["Request_Basic_Amount_USD","Request_Basic_Amount_Dollar"],["Request_Basic_Amount_USD","Basic_USD"]],
+    [["Running_IGST_USD","Running_IGST_Dollar"],["Running_IGST_USD"]],
+    [["Running_Total_USD","Running_Total_Dollar"],["Running_Total_USD"]],
+    [["Deduction_from_Advance_USD","Deduction_from_Advance_Dollar"],["Deduction_from_Advance_USD"]],
+    [["Deduction_From_Retention_USD","Deduction_From_Retention_Dollar"],["Deduction_From_Retention_USD"]],
+    [["Total_Deduction_USD","Total_Deduction_Dollar"],["Total_Deduction_USD"]],
+    [["Eligible_Payable_Amount_USD","Eligible_Payable_Amount_Dollar"],["Eligible_Payment_USD","Eligible_Payable_Amount_USD"]],
+    [["Running_PO_USD","Running_PO_Dollar"],["Running_PO_USD"]],
+    [["Previous_Remaining_From_Request_USD","Previous_Remaining_From_Request_Dollar"],["Previous_Remaining_From_Request_USD"]]
+  ].forEach(([targetAliases,sourceAliases])=>{
+    putIfTargetExists(data,targetSample,targetAliases,firstRawValue(prRaw,sourceAliases));
+  });
+
+  // -----------------------------------------------------------------------
+  // 4) RECONCILIATION / BANK PAYMENT VALUES
+  // -----------------------------------------------------------------------
   data[f.eligiblePayableAmount]=Number(c.rec.eligible||0);
   data[f.paymentDone]=Number(result.inv.amount||0);
+
+  // Safe derived values that do not depend on historic running calculations.
+  const remaining=round2(Number(c.rec.eligible||0)-Number(result.inv.amount||0));
+  putIfTargetExists(data,targetSample,["Remaining_Amount","RemainingAmount"],remaining);
+  putIfTargetExists(data,targetSample,["Last_Payment","LastPayment"],Math.abs(remaining)<=CONFIG.exactAmountTolerance);
+
+  // Uploaded bank/payment method details, when present.
+  if(String(result.inv.bankName||"").trim()){
+    const resolvedBank=resolveChoiceOrLookupValue(f.bankName,result.inv.bankName);
+    if(resolvedBank!==null){
+      data[f.bankName]=resolvedBank;
+    }
+  }
+
+  if(String(result.inv.paidThrough||"").trim()){
+    const resolvedPaidThrough=resolveChoiceOrLookupValue(f.paidThrough,result.inv.paidThrough);
+    if(resolvedPaidThrough!==null){
+      data[f.paidThrough]=resolvedPaidThrough;
+    }
+  }
 
   if(String(result.inv.utr||"").trim()) data[f.utr]=String(result.inv.utr).trim();
   if(String(result.inv.transactionId||"").trim()) data[f.transactionId]=String(result.inv.transactionId).trim();
   if(String(result.inv.accountNumber||"").trim()) data[f.accountNumber]=String(result.inv.accountNumber).trim();
   if(String(result.inv.chequeNo||"").trim()) data[f.chequeNo]=String(result.inv.chequeNo).trim();
 
+  // Match audit
   data[f.importedAmount]=round2(result.inv.amount||0);
 
-  // Amount_Difference can fail Creator validation when the field's maximum
-  // digits are smaller than the calculated difference. Write it only when
-  // it fits; the full difference is always retained in Match_Remarks below.
   const safeDifference=round2(c.diff||0);
   if(Math.abs(safeDifference) <= CONFIG.amountDifferenceMax){
     data[f.amountDifference]=safeDifference;
@@ -1670,13 +1948,6 @@ async function createPaymentDetail(result){
 
   data[f.differencePercentage]=round2(c.diffPct||0);
   data[f.matchScore]=Number(c.score||0);
-
-  // IMPORTANT:
-  // Do not write Reconciliation_Status here.
-  // Creator is rejecting the value because the field's configured choice
-  // values do not match the widget text. The original widget classification
-  // is preserved in Match_Remarks. Once the exact Creator dropdown choices
-  // are confirmed, this can be mapped safely.
   data[f.reconciledOn]=dateTimeForCreator();
 
   const remarks=[
@@ -1685,14 +1956,18 @@ async function createPaymentDetail(result){
     `Uploaded PO: ${result.inv.po}.`,
     `Uploaded Vendor: ${result.inv.vendor}.`,
     `Uploaded Bank Amount: ${result.inv.amount}.`,
+    result.inv.bankName ? `Bank Name: ${result.inv.bankName}.` : "",
+    result.inv.paidThrough ? `Paid Through: ${result.inv.paidThrough}.` : "",
+    result.inv.accountNumber ? `Account Number: ${result.inv.accountNumber}.` : "",
     result.inv.utr ? `UTR: ${result.inv.utr}.` : "",
     result.inv.transactionId ? `Transaction ID: ${result.inv.transactionId}.` : "",
+    result.inv.chequeNo ? `Cheque No: ${result.inv.chequeNo}.` : "",
     `Matched Payment Requisition ID: ${c.rec.id}.`,
     `Eligible Payment: ${c.rec.eligible}.`,
     `Original Widget Classification: ${statusLabel(result.status)}.`,
     `Difference: ${round2(c.diff)}.`,
     Math.abs(round2(c.diff)) > CONFIG.amountDifferenceMax
-      ? `Amount Difference was too large for the Creator Amount_Difference field and was kept in remarks only.`
+      ? "Amount Difference was too large for the Creator Amount_Difference field and was retained in Match Remarks only."
       : "",
     `Score: ${c.score}/100.`,
     reasonForCandidate(result.inv,c),
@@ -1702,6 +1977,14 @@ async function createPaymentDetail(result){
   data[f.matchRemarks]=remarks;
   if(String(result.inv.remark||"").trim()) data[f.remarkNote]=String(result.inv.remark).trim();
 
+  // -----------------------------------------------------------------------
+  // IMPORTANT:
+  // v9 still skips Form Workflows because your current Payment_detals2
+  // workflow is assigning an invalid Reconciliation_Status value.
+  // Therefore we fetch/copy direct values here. Running fields that require
+  // your existing historical-calculation workflow may still remain blank
+  // until that Creator workflow is corrected and re-enabled.
+  // -----------------------------------------------------------------------
   const cfg={
     app_name:CONFIG.appName,
     form_name:CONFIG.paymentDetailsForm,
@@ -1711,12 +1994,11 @@ async function createPaymentDetail(result){
     }
   };
 
-  // Diagnostic: v8 never sends Reconciliation_Status itself.
-  console.log("Build v8 addRecords payload:", cfg);
+  console.log("Build v9 Payment_detals2 payload:",cfg);
 
   const response=await ZOHO.CREATOR.DATA.addRecords(cfg);
   if(response && response.code && response.code!==3000){
-    const creatorErrors = Array.isArray(response.error) ? response.error.join(" | ") : "";
+    const creatorErrors=Array.isArray(response.error)?response.error.join(" | "):"";
     throw new Error(creatorErrors || response.message || JSON.stringify(response));
   }
 
@@ -1724,7 +2006,7 @@ async function createPaymentDetail(result){
   result.accepted=true;
   result.selected=false;
   result.updateResult={paymentDetailId:newId,response};
-  result.matchSource=result.matchSource==="Automatic" ? "Automatic Accepted" : "User Selected";
+  result.matchSource=result.matchSource==="Automatic"?"Automatic Accepted":"User Selected";
 
   STATE.paymentDetails.push(Object.assign({ID:newId},data));
   return {id:newId,response,data};
