@@ -1,486 +1,1355 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
-<title>PO Reconciliation Widget</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Payment Reconciliation Center</title>
+
+<!-- Zoho Creator Widget SDK V2 -->
 <script src="https://static.zohocdn.com/creator/widgets/version/2.0/widgetsdk-min.js"></script>
+
+<!-- Excel / CSV reader -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 <style>
-  :root{
-    --bg:#F5F3EE; --surface:#fff; --border:#DCD6C8; --ink:#1E2A32; --muted:#5B6B76;
-    --accent:#2B6CB0; --accent-soft:#DCE7F2;
-    --ok:#2F7D4F; --ok-bg:#E1F0E5;
-    --warn:#B36A1D; --warn-bg:#F5E8D6;
-    --bad:#A8433F; --bad-bg:#F3DEDC;
-    --neutral:#5B6472; --neutral-bg:#E7E5DF;
-  }
-  *{ box-sizing:border-box; }
-  body{ margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--ink); padding:20px; }
-  .wrap{ max-width:980px; margin:0 auto; }
-  h1{ font-size:19px; margin:0 0 4px; }
-  h2{ font-size:13px; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); margin:0 0 12px; }
-  .sub{ color:var(--muted); font-size:13.5px; margin-bottom:18px; }
-  .tabs{ display:flex; gap:6px; margin-bottom:16px; }
-  .tab{ padding:8px 16px; border:1px solid var(--border); background:var(--surface); border-radius:8px; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--muted); }
-  .tab.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
-  .panel{ display:none; }
-  .panel.active{ display:block; }
-  .search{ display:flex; gap:8px; margin-bottom:20px; }
-  .search input{ flex:1; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; }
-  button.primary{ padding:10px 18px; border:none; border-radius:8px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; font-size:14px; }
-  button.primary:disabled{ opacity:0.5; cursor:default; }
-  button.ghost{ padding:9px 16px; border:1px solid var(--border); background:var(--surface); border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; }
-  button.ghost:hover{ background:var(--accent-soft); }
-  .card{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; margin-bottom:14px; }
-  .row{ display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid #EFEAE0; font-size:14.5px; }
-  .row:last-child{ border-bottom:none; }
-  .row .k{ color:var(--muted); }
-  .row .v{ font-weight:600; text-align:right; }
-  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
-  th,td{ text-align:left; padding:8px 10px; border-bottom:1px solid #EFEAE0; vertical-align:top; }
-  th{ color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; }
-  .pill{ display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; white-space:nowrap; }
-  .pill.ok{ background:var(--ok-bg); color:var(--ok); }
-  .pill.warn{ background:var(--warn-bg); color:var(--warn); }
-  .pill.bad{ background:var(--bad-bg); color:var(--bad); }
-  .pill.neutral{ background:var(--neutral-bg); color:var(--neutral); }
-  .note{ font-size:13.5px; color:var(--muted); margin-top:8px; }
-  .empty{ color:var(--muted); font-size:14px; padding:20px 0; text-align:center; }
-  .import-row{ display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
-  .import-row input[type=file]{ font-size:13px; }
-  .toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-  .suggestion{ font-size:13px; color:var(--muted); max-width:280px; }
-  .count-tag{ font-size:12.5px; color:var(--muted); }
+:root{
+  --bg:#f5f7fb;
+  --surface:#ffffff;
+  --surface2:#f9fafc;
+  --border:#e4e8f0;
+  --ink:#172033;
+  --muted:#667085;
+  --brand:#c92f78;
+  --brand2:#8f2459;
+  --brandSoft:#fbe7f1;
+  --blue:#2563eb;
+  --blueSoft:#eaf1ff;
+  --green:#168454;
+  --greenSoft:#e6f6ee;
+  --amber:#b56a0b;
+  --amberSoft:#fff4dd;
+  --red:#c83d45;
+  --redSoft:#fdebec;
+  --gray:#6b7280;
+  --graySoft:#eef0f4;
+  --shadow:0 14px 34px rgba(24,32,51,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+button,input{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+
+.shell{max-width:1500px;margin:0 auto;padding:20px}
+.topbar{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:18px;
+  background:linear-gradient(135deg,#fff 0%,#fff8fc 100%);
+  border:1px solid var(--border);border-radius:20px;padding:20px 22px;box-shadow:var(--shadow)
+}
+.title-wrap{display:flex;gap:14px;align-items:flex-start}
+.logo{
+  width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--brand),#e6589b);
+  display:grid;place-items:center;color:#fff;font-weight:900;box-shadow:0 10px 25px rgba(201,47,120,.25)
+}
+h1{font-size:22px;margin:0 0 5px}
+.subtitle{font-size:13.5px;color:var(--muted);max-width:760px;line-height:1.55}
+.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.connection{
+  display:flex;align-items:center;gap:8px;border:1px solid var(--border);background:#fff;
+  border-radius:999px;padding:8px 12px;font-size:12.5px;color:var(--muted)
+}
+.dot{width:9px;height:9px;border-radius:50%;background:#b7bdc8}
+.dot.ok{background:var(--green)}
+.dot.bad{background:var(--red)}
+.btn{
+  border:1px solid var(--border);background:#fff;color:var(--ink);border-radius:10px;
+  padding:9px 13px;font-weight:700;font-size:13px
+}
+.btn:hover{background:#faf7f9}
+.btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.btn.primary:hover{background:var(--brand2)}
+.btn.danger{background:#fff;color:var(--red);border-color:#f0c7ca}
+.btn.small{padding:7px 10px;font-size:12px}
+.btn:disabled{opacity:.48;cursor:not-allowed}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-top:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:0 8px 24px rgba(24,32,51,.04)}
+.upload-card{padding:20px}
+.section-title{font-size:14px;font-weight:800;margin:0 0 4px}
+.section-sub{font-size:12.5px;color:var(--muted);margin:0 0 14px}
+
+.dropzone{
+  border:1.5px dashed #d5a1bc;border-radius:16px;background:#fffafd;padding:24px;
+  display:flex;gap:16px;align-items:center;justify-content:center;text-align:center;transition:.18s
+}
+.dropzone.drag{border-color:var(--brand);background:var(--brandSoft)}
+.drop-icon{width:46px;height:46px;border-radius:14px;background:var(--brandSoft);color:var(--brand);display:grid;place-items:center;font-size:23px}
+.drop-main{font-size:14px;font-weight:800}
+.drop-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.file-meta{
+  margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;
+  padding:11px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px
+}
+.file-name{font-weight:800;font-size:13px}
+.file-info{font-size:12px;color:var(--muted);margin-top:2px}
+
+.progress-wrap{margin-top:13px}
+.progress-line{height:8px;background:#edf0f5;border-radius:999px;overflow:hidden}
+.progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--brand),#ef69a7);transition:.2s}
+.progress-text{font-size:12px;color:var(--muted);margin-top:6px}
+
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.stat{padding:16px;border-radius:16px;border:1px solid var(--border);background:#fff}
+.stat .label{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.stat .value{font-size:26px;font-weight:900;margin-top:6px}
+.stat .hint{font-size:11.5px;color:var(--muted);margin-top:3px}
+.stat.total{background:#fff}
+.stat.match{background:var(--greenSoft);border-color:#c7ead8}
+.stat.suggest{background:var(--amberSoft);border-color:#f0dbad}
+.stat.mismatch{background:var(--redSoft);border-color:#f0c7ca}
+.stat.notfound{background:var(--graySoft);border-color:#dfe3e9}
+
+.results-card{overflow:hidden}
+.toolbar{
+  padding:14px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap
+}
+.toolbar-left,.toolbar-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.searchbox{
+  min-width:270px;border:1px solid var(--border);background:#fff;border-radius:10px;
+  padding:9px 11px;outline:none
+}
+.searchbox:focus{border-color:#d781ad;box-shadow:0 0 0 3px #fae9f2}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{
+  border:1px solid var(--border);background:#fff;border-radius:999px;padding:7px 10px;
+  font-size:12px;font-weight:800;color:var(--muted)
+}
+.chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+.table-wrap{overflow:auto;max-height:620px}
+table{width:100%;border-collapse:separate;border-spacing:0;min-width:1180px}
+th{
+  position:sticky;top:0;z-index:2;background:#fafbfc;border-bottom:1px solid var(--border);
+  color:#667085;font-size:11px;text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:11px 10px
+}
+td{border-bottom:1px solid #edf0f4;padding:11px 10px;font-size:12.5px;vertical-align:middle}
+tr.data-row:hover{background:#fffafd}
+.cell-main{font-weight:800}
+.cell-sub{font-size:11.5px;color:var(--muted);margin-top:2px;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.money{font-variant-numeric:tabular-nums;font-weight:800}
+.score{font-weight:900}
+.status{
+  display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:11.5px;font-weight:900;white-space:nowrap
+}
+.status.matched{background:var(--greenSoft);color:var(--green)}
+.status.suggested{background:var(--amberSoft);color:var(--amber)}
+.status.mismatch{background:var(--redSoft);color:var(--red)}
+.status.not-found{background:var(--graySoft);color:var(--gray)}
+.status.accepted{background:var(--blueSoft);color:var(--blue)}
+.status.config-error{background:#f4e8ff;color:#7838a3}
+
+.check{width:17px;height:17px;accent-color:var(--brand)}
+.link-btn{border:0;background:transparent;color:var(--brand);font-weight:800;padding:4px 0}
+.empty{padding:42px 20px;text-align:center;color:var(--muted)}
+.empty strong{display:block;color:var(--ink);margin-bottom:5px}
+
+.drawer-backdrop{
+  position:fixed;inset:0;background:rgba(19,25,39,.22);z-index:50;opacity:0;pointer-events:none;transition:.18s
+}
+.drawer-backdrop.open{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;right:0;top:0;height:100vh;width:min(620px,96vw);background:#fff;z-index:60;
+  transform:translateX(102%);transition:.22s;box-shadow:-20px 0 50px rgba(15,23,42,.15);display:flex;flex-direction:column
+}
+.drawer.open{transform:translateX(0)}
+.drawer-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.drawer-title{font-weight:900;font-size:17px}
+.drawer-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.drawer-body{padding:18px 20px;overflow:auto;flex:1}
+.drawer-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;background:#fff}
+
+.compare{
+  display:grid;grid-template-columns:140px 1fr 1fr 34px;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:12px
+}
+.compare>div{padding:9px 10px;border-bottom:1px solid #edf0f4;font-size:12px}
+.compare>div:nth-last-child(-n+4){border-bottom:0}
+.compare .hdr{font-weight:900;background:#fafbfc;color:#667085}
+.compare .field{font-weight:800;background:#fafbfc}
+.compare .yes{color:var(--green);font-weight:900;text-align:center}
+.compare .near{color:var(--amber);font-weight:900;text-align:center}
+.compare .no{color:var(--red);font-weight:900;text-align:center}
+
+.reason{
+  margin-top:14px;padding:12px 13px;border-radius:12px;background:#fafbfc;border:1px solid var(--border);
+  font-size:12.5px;line-height:1.6;color:#475467
+}
+.reason b{color:var(--ink)}
+
+.candidate-head{display:flex;justify-content:space-between;align-items:center;margin-top:18px;margin-bottom:8px}
+.candidate-title{font-size:13px;font-weight:900}
+.candidate{
+  border:1px solid var(--border);border-radius:13px;padding:11px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start
+}
+.candidate.selected{border-color:#dc8db7;background:#fff8fc}
+.candidate input{margin-top:4px;accent-color:var(--brand)}
+.candidate-main{flex:1;min-width:0}
+.candidate-top{display:flex;justify-content:space-between;gap:8px}
+.candidate-po{font-weight:900;font-size:12.5px}
+.candidate-score{font-weight:900;color:var(--brand);white-space:nowrap}
+.candidate-meta{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.45}
+.candidate-amount{font-size:12px;font-weight:900;margin-top:5px}
+.manual-search{display:flex;gap:7px;margin:10px 0}
+.manual-search input{flex:1;border:1px solid var(--border);border-radius:10px;padding:9px 10px;outline:none}
+
+.toast-wrap{position:fixed;right:18px;bottom:18px;z-index:100;display:flex;flex-direction:column;gap:8px}
+.toast{background:#172033;color:#fff;padding:11px 14px;border-radius:11px;box-shadow:var(--shadow);font-size:12.5px;max-width:390px}
+.toast.success{background:#116c46}
+.toast.error{background:#a52e35}
+
+.modal-backdrop{position:fixed;inset:0;background:rgba(19,25,39,.28);z-index:70;display:grid;place-items:center;padding:20px}
+.modal{background:#fff;width:min(860px,96vw);max-height:88vh;overflow:auto;border-radius:18px;box-shadow:var(--shadow)}
+.modal-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:16px 18px}
+pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;padding:12px;border-radius:12px;font-size:11px}
+
+@media(max-width:900px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .topbar{flex-direction:column}
+  .top-actions{justify-content:flex-start}
+}
+@media(max-width:560px){
+  .shell{padding:10px}
+  .stats{grid-template-columns:1fr 1fr}
+  .searchbox{min-width:200px}
+}
 </style>
 </head>
+
 <body>
-<div class="wrap">
-  <h1>PO Reconciliation</h1>
-  <div class="sub">Checks Vendor Name, Project Code, and Amount across the Purchase Order Report and Payment Requisitions — import, match, and view results all in this one screen.</div>
-
-  <div class="tabs">
-    <div class="tab active" id="tabQuickBtn" onclick="showTab('quick')">Quick Check (one PO)</div>
-    <div class="tab" id="tabBulkBtn" onclick="showTab('bulk')">Import &amp; Match (batch)</div>
-  </div>
-
-  <div class="panel active" id="tabQuick">
-    <div class="search">
-      <input id="poInput" placeholder="Enter a PO No (or part of it, e.g. 13-1176)" />
-      <button class="primary" id="searchBtn" onclick="runQuickCheck()">Check</button>
-    </div>
-    <div id="quickResults"></div>
-  </div>
-
-  <div class="panel" id="tabBulk">
-    <div class="card">
-      <h2>1. Import your invoice list</h2>
-      <div class="import-row">
-        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" />
-        <button class="primary" id="processBtn" onclick="processImport()">Match all rows</button>
-        <span class="count-tag" id="fileStatus"></span>
+<div class="shell">
+  <section class="topbar">
+    <div class="title-wrap">
+      <div class="logo">PR</div>
+      <div>
+        <h1>Payment Reconciliation Center</h1>
+        <div class="subtitle">
+          Upload an Excel/CSV payment list, compare each row with live Payment Requisition records,
+          review exact and suggested matches, choose an alternate candidate when needed, and update
+          the existing Payment_details2 record only after user confirmation.
+        </div>
       </div>
-      <div class="note">Any column headers with "PO", "Vendor", and "Amount" in them are picked up automatically — case, extra spaces, ₹/Rs./commas in the amount column are all handled. No need to clean the file first.</div>
     </div>
+    <div class="top-actions">
+      <div class="connection"><span id="connDot" class="dot"></span><span id="connText">Checking Creator...</span></div>
+      <button class="btn" onclick="refreshCreatorData()">Refresh Creator Data</button>
+      <button class="btn" onclick="openDiagnostics()">Diagnostics</button>
+    </div>
+  </section>
 
-    <div class="card" id="bulkResultsCard" style="display:none;">
+  <div class="grid">
+    <section class="card upload-card">
+      <div class="section-title">1. Upload payment file</div>
+      <div class="section-sub">
+        Accepted: .xlsx, .xls, .csv. Required columns: PO No, Vendor Name, Eligible Payment.
+        Project Code is strongly recommended. Nothing is written to Creator at this stage.
+      </div>
+
+      <div id="dropzone" class="dropzone">
+        <div class="drop-icon">↑</div>
+        <div>
+          <div class="drop-main">Drop Excel / CSV here</div>
+          <div class="drop-sub">or choose a file from your computer</div>
+          <div style="margin-top:10px">
+            <button class="btn primary" onclick="document.getElementById('fileInput').click()">Browse File</button>
+            <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" class="hidden">
+          </div>
+        </div>
+      </div>
+
+      <div id="fileMeta" class="file-meta hidden">
+        <div>
+          <div id="fileName" class="file-name"></div>
+          <div id="fileInfo" class="file-info"></div>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button id="processBtn" class="btn primary" onclick="processCurrentFile()">Process & Match</button>
+          <button class="btn" onclick="clearFile()">Clear</button>
+        </div>
+      </div>
+
+      <div id="progressWrap" class="progress-wrap hidden">
+        <div class="progress-line"><div id="progressBar" class="progress-bar"></div></div>
+        <div id="progressText" class="progress-text">Preparing...</div>
+      </div>
+    </section>
+
+    <section id="statsSection" class="stats hidden">
+      <div class="stat total"><div class="label">Total rows</div><div id="sTotal" class="value">0</div><div class="hint">Detected in file</div></div>
+      <div class="stat match"><div class="label">Matched</div><div id="sMatched" class="value">0</div><div class="hint">Exact match</div></div>
+      <div class="stat suggest"><div class="label">Suggested</div><div id="sSuggested" class="value">0</div><div class="hint">Review recommended</div></div>
+      <div class="stat mismatch"><div class="label">Mismatch</div><div id="sMismatch" class="value">0</div><div class="hint">Important differences</div></div>
+      <div class="stat notfound"><div class="label">Not found</div><div id="sNotFound" class="value">0</div><div class="hint">No useful candidate</div></div>
+    </section>
+
+    <section id="resultsCard" class="card results-card hidden">
       <div class="toolbar">
-        <h2 style="margin:0;">2. Results</h2>
-        <button class="ghost" onclick="exportResults()">Export results (CSV)</button>
+        <div class="toolbar-left">
+          <input id="resultSearch" class="searchbox" placeholder="Search PO / Vendor / Project..." oninput="renderTable()">
+          <div class="chips">
+            <button class="chip active" data-filter="all" onclick="setFilter('all',this)">All</button>
+            <button class="chip" data-filter="matched" onclick="setFilter('matched',this)">Matched</button>
+            <button class="chip" data-filter="suggested" onclick="setFilter('suggested',this)">Suggested</button>
+            <button class="chip" data-filter="mismatch" onclick="setFilter('mismatch',this)">Mismatch</button>
+            <button class="chip" data-filter="not-found" onclick="setFilter('not-found',this)">Not Found</button>
+            <button class="chip" data-filter="accepted" onclick="setFilter('accepted',this)">Accepted</button>
+          </div>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn" onclick="selectRecommended()">Select strong matches</button>
+          <button class="btn primary" onclick="acceptSelected()">Accept Selected</button>
+          <button class="btn" onclick="exportResults()">Export CSV</button>
+        </div>
       </div>
-      <div id="bulkResults"></div>
-    </div>
-  </div>
 
-  <div class="card">
-    <h2>Connection diagnostics</h2>
-    <div class="note" style="margin-top:0;">If every row comes back "Not Found" — even one you know exists — the field/report names in CONFIG are the usual cause, not the data. This fetches one real record with no filtering at all, so you can see its actual field names and compare them to CONFIG.</div>
-    <div class="import-row">
-      <button class="ghost" onclick="runDiagnostics()">Check connection &amp; field names</button>
-    </div>
-    <div id="diagOut"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:38px"><input id="selectAllBox" class="check" type="checkbox" onchange="toggleAllVisible(this.checked)"></th>
+              <th>Status</th>
+              <th>Project</th>
+              <th>PO No</th>
+              <th>Vendor</th>
+              <th>File Amount</th>
+              <th>Selected Creator Amount</th>
+              <th>Difference</th>
+              <th>Score</th>
+              <th>Match Source</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+        <div id="emptyResults" class="empty hidden"><strong>No rows for this filter.</strong>Change the filter or search text.</div>
+      </div>
+    </section>
   </div>
 </div>
 
+<div id="drawerBackdrop" class="drawer-backdrop" onclick="closeDrawer()"></div>
+<aside id="drawer" class="drawer">
+  <div class="drawer-head">
+    <div>
+      <div id="drawerTitle" class="drawer-title">Match details</div>
+      <div id="drawerSub" class="drawer-sub"></div>
+    </div>
+    <button class="btn small" onclick="closeDrawer()">Close</button>
+  </div>
+  <div id="drawerBody" class="drawer-body"></div>
+  <div class="drawer-foot">
+    <button class="btn danger" onclick="rejectCurrent()">Reject / Leave Unmatched</button>
+    <button id="acceptCurrentBtn" class="btn primary" onclick="acceptCurrent()">Accept Selected Match</button>
+  </div>
+</aside>
+
+<div id="diagModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <strong>Connection & Field Diagnostics</strong>
+      <button class="btn small" onclick="closeDiagnostics()">Close</button>
+    </div>
+    <div id="diagBody" class="modal-body"></div>
+  </div>
+</div>
+
+<div id="toastWrap" class="toast-wrap"></div>
+
 <script>
-/* ======================= EDIT THIS SECTION FOR YOUR APP =======================
-   Every name below is a Creator "link name", not the display label you see in
-   the report. Find the real link name by opening the field in the Form/Report
-   builder — its Link Name is shown in the field properties panel on the right.
-   The values here are best guesses from the report screenshots; confirm each
-   one before relying on this. */
+/* ============================================================================
+   PAYMENT RECONCILIATION WIDGET - CONFIGURATION
+
+   This file is intentionally self-contained for EXTERNAL hosting.
+
+   IMPORTANT:
+   - These are Zoho Creator LINK NAMES, not display labels.
+   - Confirm them in Creator Form/Report Builder if Diagnostics reports a mismatch.
+   - This widget NEVER adds a Payment_detals2 record.
+   - Accept Match updates an EXISTING Payment_detals2 record only.
+============================================================================ */
 const CONFIG = {
   appName: "mega-engineering-sales",
 
-  poReport: "Purchase_Order_Report",
-  poFields: {
-    poNo: "PO_No",
-    vendor: "Vendor_Name",
+  paymentRequisitionReport: "All_Payment_Requisitions_INR",
+  paymentRequisitionFields: {
+    po: "PO_Number",
     project: "Project_Code",
-    amount: "Sub_Total"              // the "Sub Total (₹)" column
+    vendor: "Vendor_Name",
+    eligible: "Eligible_Payment",
+    requestDate: "Payment_Request_Date",
+    paymentType: "Payment_Type",
+    requestStatus: "Payment_Request_Status"
   },
 
-  // Payment Requisitions come in two reports by currency. If your data is
-  // truly two different currencies (not just a display/formatting split of
-  // the same underlying amount), amounts from the two are NOT added together
-  // below — each is shown and checked on its own.
-  paymentReports: [
-    { reportName: "All_Payment_Requisitions_INR", currencyLabel: "INR", symbol: "₹" },
-    { reportName: "All_Payment_Requisitions_USD", currencyLabel: "USD", symbol: "$" }
-  ],
-  paymentFields: {
-    poNo: "PO_No",
+  paymentDetailsReport: "Payment_detals2_Report",
+  paymentDetailsFields: {
+    po: "PO_No",
     vendor: "Vendor_Name",
-    project: "Project_Code",
-    eligiblePayment: "Eligible_Payment",   // matched against this now, not Payable Amount
-    paymentPercent: "Payment_Percentage",
-    date: "Payment_Request_Date"
+    paymentType: "Payment_Type",
+    paymentRequisition: "Payment_Requisition",
+    importedAmount: "Imported_Amount",
+    eligiblePayableAmount: "Eligible_Payable_Amount",
+    amountDifference: "Amount_Difference",
+    differencePercentage: "Difference_Percentage",
+    matchScore: "Match_Score",
+    reconciliationStatus: "Reconciliation_Status",
+    matchRemarks: "Match_Remarks",
+    reconciledOn: "Reconciled_On"
   },
 
-  amountTolerance: 1               // rupees/dollars — treat rounding this small as a match
+  exactAmountTolerance: 1,
+  suggestedMinScore: 80,
+  mismatchMinScore: 50,
+  strongSelectMinScore: 90,
+  candidateCount: 5,
+
+  // No record will be created if there is no existing Payment_detals2 record.
+  allowCreatePaymentDetail: false
 };
-/* ================================================================================ */
 
-function cleanAmount(raw){
-  if(raw === null || raw === undefined) return 0;
-  var s = String(raw);
-  s = s.replace(/[a-zA-Z₹$€£]/g, "");   // drop currency words/symbols (Rs, INR, USD, ₹...)
-  s = s.replace(/,/g, "");                // drop thousands separators
-  s = s.replace(/[^0-9.]/g, "");           // drop everything left except digits and dots
-  var parts = s.split(".");
-  if(parts.length > 2){
-    // more than one "." left (e.g. from "Rs." touching the number) — treat only
-    // the LAST one as the real decimal point
-    s = parts.slice(0, -1).join("") + "." + parts[parts.length - 1];
-  }
-  return (s === "" || s === ".") ? 0 : parseFloat(s);
-}
-function cleanVendor(raw){
-  return String(raw || "").trim().toUpperCase().replace(/[.,]/g, "").replace(/\s+/g, " ");
-}
-function cleanPoNo(raw){
-  return String(raw || "").trim().toUpperCase();
-}
-function fmtMoney(n, symbol){
-  return (symbol || "₹") + Number(n || 0).toLocaleString("en-IN", {minimumFractionDigits:2, maximumFractionDigits:2});
-}
-function pill(status, label){
-  var map = { ok:"ok", warn:"warn", bad:"bad", neutral:"neutral" };
-  var cls = map[status] || "neutral";
-  return '<span class="pill ' + cls + '">' + (label || status) + '</span>';
+/* ============================== STATE ====================================== */
+const STATE = {
+  creatorReady: false,
+  creatorError: null,
+  paymentRequisitions: [],
+  paymentDetails: [],
+  importedRows: [],
+  results: [],
+  currentFile: null,
+  activeFilter: "all",
+  drawerIndex: null
+};
+
+/* ============================= HELPERS ===================================== */
+function htmlEscape(v){
+  return String(v ?? "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
 }
 
-function showTab(name){
-  document.getElementById('tabQuick').classList.toggle('active', name === 'quick');
-  document.getElementById('tabBulk').classList.toggle('active', name === 'bulk');
-  document.getElementById('tabQuickBtn').classList.toggle('active', name === 'quick');
-  document.getElementById('tabBulkBtn').classList.toggle('active', name === 'bulk');
-}
-
-/* -------------------- shared lookup: one PO No -> {po, payments[]} -------------------- */
-function lookupPO(poNoRaw){
-  var cleaned = cleanPoNo(poNoRaw);
-  var poCriteria = '(' + CONFIG.poFields.poNo + ' == "' + cleaned + '")';
-  var poConfig = { app_name: CONFIG.appName, report_name: CONFIG.poReport, criteria: poCriteria, max_records: 1000 };
-
-  var paymentCalls = CONFIG.paymentReports.map(function(pr){
-    var criteria = '(' + CONFIG.paymentFields.poNo + ' == "' + cleaned + '")';
-    return ZOHO.CREATOR.DATA.getRecords({ app_name: CONFIG.appName, report_name: pr.reportName, criteria: criteria, max_records: 1000 })
-      .then(function(res){ return { meta: pr, rows: (res && res.data) || [] }; })
-      .catch(function(){ return { meta: pr, rows: [] }; }); // a broken payment-report name just means "no requisitions found" — not fatal
-  });
-
-  // The PO lookup is the one failure we can't afford to swallow silently:
-  // if appName / poReport / poFields.poNo is wrong, EVERY row would otherwise
-  // look identical to a genuine "PO doesn't exist." So keep the real error.
-  var poError = null;
-  return Promise.all([
-    ZOHO.CREATOR.DATA.getRecords(poConfig).catch(function(err){ poError = err; return { data: [] }; }),
-    Promise.all(paymentCalls)
-  ]).then(function(r){
-    var poRows = (r[0] && r[0].data) || [];
-    return { po: poRows[0] || null, paymentGroups: r[1], poError: poError };
-  });
-}
-
-function describeError(err){
-  if(!err) return "Unknown error.";
-  if(typeof err === "string") return err;
-  return err.message || err.description || JSON.stringify(err);
-}
-
-/* -------------------- Quick Check tab -------------------- */
-function runQuickCheck(){
-  var poNoRaw = document.getElementById("poInput").value.trim();
-  var out = document.getElementById("quickResults");
-  if(!poNoRaw){ out.innerHTML = '<div class="empty">Enter a PO No to check.</div>'; return; }
-
-  document.getElementById("searchBtn").disabled = true;
-  out.innerHTML = '<div class="empty">Looking up records…</div>';
-
-  lookupPO(poNoRaw).then(function(result){
-    renderQuick(poNoRaw, result);
-  }).catch(function(err){
-    out.innerHTML = '<div class="empty">Could not reach Creator data — check the app/report names in CONFIG.<br><br>' + (err && err.message ? err.message : JSON.stringify(err)) + '</div>';
-  }).finally(function(){
-    document.getElementById("searchBtn").disabled = false;
-  });
-}
-
-function renderQuick(poNoRaw, result){
-  var out = document.getElementById("quickResults");
-  if(result.poError){
-    out.innerHTML = '<div class="card"><div class="row"><span class="k">Result</span><span class="v">' + pill("warn","Config error") + '</span></div>'
-      + '<div class="note">The lookup itself failed — this is different from "PO not found." Check appName / poReport / poFields.poNo in CONFIG against your app.<br><br><b>Raw error:</b> ' + describeError(result.poError) + '</div></div>';
-    return;
-  }
-  if(!result.po){
-    out.innerHTML = '<div class="card"><div class="row"><span class="k">Result</span><span class="v">' + pill("bad","No PO found") + '</span></div></div>';
-    return;
-  }
-  var po = result.po;
-  var poVendor = po[CONFIG.poFields.vendor];
-  var poProject = po[CONFIG.poFields.project];
-  var poAmount = cleanAmount(po[CONFIG.poFields.amount]);
-
-  var html = '<div class="card"><h2>Purchase Order</h2>';
-  html += '<div class="row"><span class="k">PO No</span><span class="v">' + (po[CONFIG.poFields.poNo] || "—") + '</span></div>';
-  html += '<div class="row"><span class="k">Vendor Name</span><span class="v">' + (poVendor || "—") + '</span></div>';
-  html += '<div class="row"><span class="k">Project Code</span><span class="v">' + (poProject || "—") + '</span></div>';
-  html += '<div class="row"><span class="k">Sub Total</span><span class="v">' + fmtMoney(poAmount) + '</span></div>';
-  html += '</div>';
-
-  result.paymentGroups.forEach(function(group){
-    var meta = group.meta, rows = group.rows;
-    html += '<div class="card"><h2>Payment Requisitions — ' + meta.currencyLabel + ' (' + rows.length + ')</h2>';
-    if(rows.length === 0){
-      html += '<div class="empty">None in this currency.</div>';
-    } else {
-      var sum = 0, vendorMismatch = false, projectMismatch = false;
-      html += '<table><tr><th>Date</th><th>Vendor</th><th>Project</th><th>Payment %</th><th>Eligible Payment</th></tr>';
-      rows.forEach(function(p){
-        sum += cleanAmount(p[CONFIG.paymentFields.eligiblePayment]);
-        if(cleanVendor(p[CONFIG.paymentFields.vendor]) !== cleanVendor(poVendor)) vendorMismatch = true;
-        if(p[CONFIG.paymentFields.project] && poProject && p[CONFIG.paymentFields.project] !== poProject) projectMismatch = true;
-        html += '<tr><td>' + (p[CONFIG.paymentFields.date] || "—") + '</td><td>' + (p[CONFIG.paymentFields.vendor] || "—") + '</td><td>' + (p[CONFIG.paymentFields.project] || "—") + '</td><td>' + (p[CONFIG.paymentFields.paymentPercent] || "—") + '</td><td>' + fmtMoney(cleanAmount(p[CONFIG.paymentFields.eligiblePayment]), meta.symbol) + '</td></tr>';
-      });
-      html += '</table>';
-      var diff = Math.abs(sum - poAmount);
-      var status = diff <= CONFIG.amountTolerance ? "ok" : (sum < poAmount ? "warn" : "bad");
-      html += '<div class="row" style="margin-top:8px;"><span class="k">Vendor consistent</span><span class="v">' + pill(vendorMismatch?"bad":"ok", vendorMismatch?"Differs":"OK") + '</span></div>';
-      html += '<div class="row"><span class="k">Project consistent</span><span class="v">' + pill(projectMismatch?"bad":"ok", projectMismatch?"Differs":"OK") + '</span></div>';
-      html += '<div class="row"><span class="k">Total Eligible Payment vs PO Sub Total</span><span class="v">' + pill(status) + ' &nbsp;diff ' + fmtMoney(diff, meta.symbol) + '</span></div>';
-      if(status === "warn"){
-        html += '<div class="note">Lower than the PO amount — expected if this is a partial/advance payment.</div>';
+function valueText(v, preferredKeys){
+  if(v === null || v === undefined) return "";
+  if(typeof v === "string" || typeof v === "number" || typeof v === "boolean") return String(v);
+  if(Array.isArray(v)) return v.map(x => valueText(x, preferredKeys)).filter(Boolean).join(", ");
+  if(typeof v === "object"){
+    preferredKeys = preferredKeys || [];
+    for(const k of preferredKeys){
+      if(v[k] !== undefined && v[k] !== null && String(v[k]).trim() !== "") return valueText(v[k]);
+    }
+    for(const k of ["display_value","zc_display_value","value","name","Name"]){
+      if(v[k] !== undefined && v[k] !== null){
+        const s = valueText(v[k], preferredKeys);
+        if(s) return s;
       }
     }
-    html += '</div>';
-  });
-
-  out.innerHTML = html;
+    // Zoho lookup maps often include ID plus their configured display field.
+    for(const [k,val] of Object.entries(v)){
+      if(k === "ID" || k === "id") continue;
+      const s = valueText(val, preferredKeys);
+      if(s) return s;
+    }
+  }
+  return "";
 }
 
-/* -------------------- Import & Match tab -------------------- */
-var lastResults = [];
-
-function detectColumn(headers, keyword){
-  var idx = headers.findIndex(function(h){ return String(h).toLowerCase().indexOf(keyword) !== -1; });
-  return idx === -1 ? null : headers[idx];
+function lookupId(v){
+  if(v && typeof v === "object") return String(v.ID || v.id || "");
+  return "";
 }
 
-function parseFile(file){
-  return new Promise(function(resolve, reject){
-    var reader = new FileReader();
-    reader.onload = function(e){
+function cleanAmount(raw){
+  if(raw === null || raw === undefined || raw === "") return 0;
+  if(typeof raw === "number") return isFinite(raw) ? raw : 0;
+  let s = String(raw).trim();
+  // Parentheses as negative
+  const neg = /^\(.*\)$/.test(s);
+  s = s.replace(/[₹$€£]/g,"").replace(/\b(INR|USD|RS|RUPEES?)\b/gi,"");
+  s = s.replace(/,/g,"").replace(/[^\d.\-]/g,"");
+  const parts = s.split(".");
+  if(parts.length > 2) s = parts.slice(0,-1).join("") + "." + parts[parts.length-1];
+  let n = parseFloat(s);
+  if(!isFinite(n)) n = 0;
+  return neg ? -Math.abs(n) : n;
+}
+
+function normPO(v){
+  return valueText(v, ["PO_Number","PO_No"])
+    .toUpperCase().replace(/\s+/g,"").replace(/[‐‑‒–—]/g,"-").trim();
+}
+function poCore(v){ return normPO(v).replace(/[^A-Z0-9]/g,""); }
+
+function normProject(v){
+  return valueText(v, ["Project_Code"]).toUpperCase().replace(/\s+/g,"").trim();
+}
+
+function normVendor(v){
+  return valueText(v, ["Vendor_Display_Name","Vendor_Name"])
+    .toUpperCase()
+    .replace(/&/g," AND ")
+    .replace(/\b(PVT\.?|PRIVATE)\b/g," PRIVATE ")
+    .replace(/\b(LTD\.?|LIMITED)\b/g," LIMITED ")
+    .replace(/[^A-Z0-9]+/g," ")
+    .replace(/\s+/g," ")
+    .trim();
+}
+
+function levenshtein(a,b){
+  a = String(a || ""); b = String(b || "");
+  if(a === b) return 0;
+  if(!a.length) return b.length;
+  if(!b.length) return a.length;
+  const prev = Array.from({length:b.length+1},(_,i)=>i);
+  const cur = new Array(b.length+1);
+  for(let i=1;i<=a.length;i++){
+    cur[0]=i;
+    for(let j=1;j<=b.length;j++){
+      cur[j]=Math.min(
+        cur[j-1]+1,
+        prev[j]+1,
+        prev[j-1]+(a[i-1]===b[j-1]?0:1)
+      );
+    }
+    for(let j=0;j<=b.length;j++) prev[j]=cur[j];
+  }
+  return prev[b.length];
+}
+
+function similarity(a,b){
+  a=String(a||""); b=String(b||"");
+  if(!a && !b) return 1;
+  if(!a || !b) return 0;
+  if(a===b) return 1;
+  return Math.max(0,1 - levenshtein(a,b)/Math.max(a.length,b.length));
+}
+
+function vendorSimilarity(a,b){
+  const A=normVendor(a), B=normVendor(b);
+  if(!A || !B) return 0;
+  if(A===B) return 1;
+  const edit = similarity(A,B);
+  const ta=new Set(A.split(" ")), tb=new Set(B.split(" "));
+  const inter=[...ta].filter(x=>tb.has(x)).length;
+  const union=new Set([...ta,...tb]).size || 1;
+  const jaccard=inter/union;
+  return Math.max(edit,jaccard);
+}
+
+function poSimilarity(a,b){
+  const A=poCore(a), B=poCore(b);
+  if(!A || !B) return 0;
+  if(A===B) return 1;
+  return similarity(A,B);
+}
+
+function amountDiffPct(a,b){
+  const diff=Math.abs(Number(a||0)-Number(b||0));
+  const base=Math.abs(Number(b||0));
+  return base===0 ? (diff===0?0:100) : (diff/base)*100;
+}
+
+function money(n){
+  return "₹ " + Number(n||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function pct(n){ return Number(n||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:3}) + "%"; }
+
+function dateTimeForCreator(){
+  // Uses common dd-MMM-yyyy HH:mm:ss style. If your app uses a different
+  // Date-Time format, remove Reconciled_On from CONFIG or change this formatter.
+  const d=new Date();
+  const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];
+  const pad=x=>String(x).padStart(2,"0");
+  return `${pad(d.getDate())}-${m}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function escCriteriaString(v){
+  return String(v??"").replace(/\\/g,"\\\\").replace(/"/g,'\\"');
+}
+
+function toast(msg,type){
+  const wrap=document.getElementById("toastWrap");
+  const el=document.createElement("div");
+  el.className="toast "+(type||"");
+  el.textContent=msg;
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(),4200);
+}
+
+function statusLabel(s){
+  return ({
+    "matched":"Matched",
+    "suggested":"Suggested Match",
+    "mismatch":"Mismatch",
+    "not-found":"Not Found",
+    "accepted":"Accepted",
+    "config-error":"Config Error"
+  })[s] || s;
+}
+
+/* ========================= CREATOR DATA ACCESS ============================= */
+function assertCreator(){
+  if(!(window.ZOHO && ZOHO.CREATOR && ZOHO.CREATOR.DATA)){
+    throw new Error("Zoho Creator Widget SDK context is not available. Open this external page through a Zoho Creator Widget/Page, not as a normal standalone webpage.");
+  }
+}
+
+// V2 does NOT require ZOHO.CREATOR.init().
+async function getRecords(reportName, opts){
+  assertCreator();
+  opts=opts||{};
+  const cfg={
+    app_name:CONFIG.appName,
+    report_name:reportName,
+    max_records:1000,
+    field_config:"all"
+  };
+  if(opts.criteria) cfg.criteria=opts.criteria;
+  if(opts.record_cursor) cfg.record_cursor=opts.record_cursor;
+
+  const res=await ZOHO.CREATOR.DATA.getRecords(cfg);
+  if(res && res.code && res.code!==3000) throw new Error(res.message || JSON.stringify(res));
+  return res || {data:[]};
+}
+
+async function fetchCoreCreatorData(){
+  assertCreator();
+
+  // One request each; 1000 is the maximum per JS API v2 request.
+  // The widget warns if 1000 records are returned because there may be more.
+  const [prRes,pdRes]=await Promise.all([
+    getRecords(CONFIG.paymentRequisitionReport),
+    getRecords(CONFIG.paymentDetailsReport)
+  ]);
+
+  STATE.paymentRequisitions=(prRes.data||[]);
+  STATE.paymentDetails=(pdRes.data||[]);
+
+  if(STATE.paymentRequisitions.length===1000){
+    toast("Payment Requisition returned 1000 records. If your report contains more, tighten the report/filter or extend pagination before production use.","error");
+  }
+  if(STATE.paymentDetails.length===1000){
+    toast("Payment_detals2 returned 1000 records. If your report contains more, tighten the report/filter or extend pagination before production use.","error");
+  }
+}
+
+async function refreshCreatorData(){
+  setConnection(false,"Refreshing Creator...");
+  try{
+    await fetchCoreCreatorData();
+    STATE.creatorReady=true;
+    STATE.creatorError=null;
+    setConnection(true,`Creator Live · ${STATE.paymentRequisitions.length} requisitions · ${STATE.paymentDetails.length} payment details`);
+    toast("Creator data refreshed.","success");
+    if(STATE.importedRows.length) buildMatches();
+  }catch(err){
+    STATE.creatorReady=false;
+    STATE.creatorError=err;
+    setConnection(false,"Creator connection failed");
+    toast(err.message || String(err),"error");
+  }
+}
+
+function setConnection(ok,text){
+  document.getElementById("connDot").className="dot "+(ok?"ok":"bad");
+  document.getElementById("connText").textContent=text;
+}
+
+/* ============================ FILE INPUT =================================== */
+const dropzone=document.getElementById("dropzone");
+const fileInput=document.getElementById("fileInput");
+["dragenter","dragover"].forEach(evt=>dropzone.addEventListener(evt,e=>{e.preventDefault();dropzone.classList.add("drag")}));
+["dragleave","drop"].forEach(evt=>dropzone.addEventListener(evt,e=>{e.preventDefault();dropzone.classList.remove("drag")}));
+dropzone.addEventListener("drop",e=>{
+  const f=e.dataTransfer.files && e.dataTransfer.files[0];
+  if(f) setFile(f);
+});
+fileInput.addEventListener("change",()=>{ if(fileInput.files[0]) setFile(fileInput.files[0]); });
+
+function setFile(file){
+  const ok=/\.(xlsx|xls|csv)$/i.test(file.name);
+  if(!ok){toast("Please choose an .xlsx, .xls or .csv file.","error");return}
+  STATE.currentFile=file;
+  document.getElementById("fileName").textContent=file.name;
+  document.getElementById("fileInfo").textContent=(file.size/1024).toFixed(1)+" KB · ready to read";
+  document.getElementById("fileMeta").classList.remove("hidden");
+}
+
+function clearFile(){
+  STATE.currentFile=null;STATE.importedRows=[];STATE.results=[];
+  fileInput.value="";
+  document.getElementById("fileMeta").classList.add("hidden");
+  document.getElementById("statsSection").classList.add("hidden");
+  document.getElementById("resultsCard").classList.add("hidden");
+  setProgress(0,"",false);
+}
+
+function setProgress(percent,text,show){
+  const w=document.getElementById("progressWrap");
+  w.classList.toggle("hidden",!show);
+  document.getElementById("progressBar").style.width=Math.max(0,Math.min(100,percent))+"%";
+  document.getElementById("progressText").textContent=text||"";
+}
+
+function readWorkbook(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
       try{
-        var wb = XLSX.read(e.target.result, { type: "array" });
-        var sheet = wb.Sheets[wb.SheetNames[0]];
-        var rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-        resolve(rows);
-      } catch(err){ reject(err); }
+        const wb=XLSX.read(e.target.result,{type:"array",cellDates:true});
+        const sh=wb.Sheets[wb.SheetNames[0]];
+        resolve(XLSX.utils.sheet_to_json(sh,{defval:"",raw:false}));
+      }catch(err){reject(err)}
     };
-    reader.onerror = reject;
+    reader.onerror=reject;
     reader.readAsArrayBuffer(file);
   });
 }
 
-function processImport(){
-  var fileInput = document.getElementById("fileInput");
-  var file = fileInput.files[0];
-  if(!file){ document.getElementById("fileStatus").textContent = "Choose a file first."; return; }
-
-  document.getElementById("processBtn").disabled = true;
-  document.getElementById("fileStatus").textContent = "Reading file…";
-  document.getElementById("bulkResultsCard").style.display = "block";
-  document.getElementById("bulkResults").innerHTML = '<div class="empty">Reading and matching — this checks each row against Creator, so a large file will take a little while.</div>';
-
-  parseFile(file).then(function(rows){
-    if(rows.length === 0){ throw new Error("No rows found in the file."); }
-    var headers = Object.keys(rows[0]);
-    var poCol = detectColumn(headers, "po");
-    var vendorCol = detectColumn(headers, "vendor");
-    var amountCol = detectColumn(headers, "amount");
-    if(!poCol || !vendorCol || !amountCol){
-      throw new Error("Couldn't find PO / Vendor / Amount columns in the file headers: " + headers.join(", "));
-    }
-
-    var invoices = rows.map(function(r){
-      return { poNo: r[poCol], vendor: r[vendorCol], amountRaw: r[amountCol] };
-    });
-
-    document.getElementById("fileStatus").textContent = "Matching " + invoices.length + " row(s)…";
-
-    // process sequentially so we don't fire too many parallel calls at once
-    var results = [];
-    var chain = Promise.resolve();
-    invoices.forEach(function(inv){
-      chain = chain.then(function(){
-        return lookupPO(inv.poNo).then(function(result){
-          results.push(matchOne(inv, result));
-        });
-      });
-    });
-    return chain.then(function(){ return results; });
-  }).then(function(results){
-    lastResults = results;
-    renderBulk(results);
-    document.getElementById("fileStatus").textContent = "Done — " + results.length + " row(s) processed.";
-  }).catch(function(err){
-    document.getElementById("bulkResults").innerHTML = '<div class="empty">' + (err && err.message ? err.message : "Something went wrong reading that file.") + '</div>';
-    document.getElementById("fileStatus").textContent = "";
-  }).finally(function(){
-    document.getElementById("processBtn").disabled = false;
-  });
+function canonicalHeader(h){
+  return String(h||"").toLowerCase().replace(/[_\-]+/g," ").replace(/\s+/g," ").trim();
+}
+function detectColumn(headers,candidates){
+  const canon=headers.map(h=>({raw:h,c:canonicalHeader(h)}));
+  for(const wanted of candidates){
+    const exact=canon.find(x=>x.c===wanted);
+    if(exact) return exact.raw;
+  }
+  for(const wanted of candidates){
+    const contains=canon.find(x=>x.c.includes(wanted));
+    if(contains) return contains.raw;
+  }
+  return null;
 }
 
-function matchOne(invoice, result){
-  var invAmount = cleanAmount(invoice.amountRaw);
+function parseImportedRows(rows){
+  if(!rows.length) throw new Error("No data rows were found.");
+  const headers=Object.keys(rows[0]);
 
-  if(result.poError){
-    return {
-      poNo: invoice.poNo, vendor: invoice.vendor, amount: invAmount,
-      status: "warn", statusLabel: "Config Error",
-      suggestion: "The lookup itself failed (not a real \"not found\") — check appName/poReport/poFields.poNo in CONFIG. Raw error: " + describeError(result.poError)
-    };
+  const poCol=detectColumn(headers,["po no","po number","purchase order","po"]);
+  const vendorCol=detectColumn(headers,["vendor name","vendor","supplier name","supplier"]);
+  const amountCol=detectColumn(headers,["eligible payment","eligible amount","payment amount","amount"]);
+  const projectCol=detectColumn(headers,["project code","project","project cod"]);
+  const dateCol=detectColumn(headers,["payment request date","payment date","date"]);
+  const typeCol=detectColumn(headers,["payment type","type"]);
+
+  if(!poCol || !vendorCol || !amountCol){
+    throw new Error("Required columns were not detected. Need PO No, Vendor Name and Eligible Payment/Amount. Found headers: "+headers.join(", "));
   }
 
-  if(!result.po){
-    return {
-      poNo: invoice.poNo, vendor: invoice.vendor, amount: invAmount,
-      status: "bad", statusLabel: "Not Found",
-      suggestion: "No PO with this number in Purchase Order Report — check for a typo, or confirm the PO has been created."
-    };
+  return rows
+    .filter(r=>String(r[poCol]??"").trim()!=="")
+    .map((r,i)=>({
+      rowNo:i+2,
+      project:projectCol?r[projectCol]:"",
+      po:r[poCol],
+      vendor:r[vendorCol],
+      amount:cleanAmount(r[amountCol]),
+      paymentDate:dateCol?r[dateCol]:"",
+      paymentType:typeCol?r[typeCol]:"",
+      source:r
+    }));
+}
+
+async function processCurrentFile(){
+  if(!STATE.currentFile){toast("Choose a file first.","error");return}
+  if(!STATE.creatorReady){
+    toast("Creator data is not connected yet. Click Refresh Creator Data or open the widget inside Creator.","error");
+    return;
   }
 
-  var po = result.po;
-  var poVendor = po[CONFIG.poFields.vendor];
-  var poProject = po[CONFIG.poFields.project];
-  var poAmount = cleanAmount(po[CONFIG.poFields.amount]);
-  var vendorOK = cleanVendor(invoice.vendor) === cleanVendor(poVendor);
+  try{
+    document.getElementById("processBtn").disabled=true;
+    setProgress(12,"Reading Excel / CSV...",true);
+    const rows=await readWorkbook(STATE.currentFile);
+    setProgress(35,`Detected ${rows.length} file row(s). Mapping columns...`,true);
+    STATE.importedRows=parseImportedRows(rows);
 
-  // prefer comparing against Eligible Payment from requisitions (same currency
-  // groups kept separate — the first group with rows wins) if any exist yet,
-  // otherwise fall back to the PO Sub Total.
-  var target = poAmount, targetLabel = "PO Sub Total", symbol = "₹";
-  var group = result.paymentGroups.find(function(g){ return g.rows.length > 0; });
-  if(group){
-    target = group.rows.reduce(function(sum, p){ return sum + cleanAmount(p[CONFIG.paymentFields.eligiblePayment]); }, 0);
-    targetLabel = "Eligible Payment (" + group.meta.currencyLabel + ")";
-    symbol = group.meta.symbol;
+    setProgress(58,"Comparing with Payment Requisition records...",true);
+    await new Promise(r=>setTimeout(r,30));
+    buildMatches();
+
+    setProgress(100,"Reconciliation preview ready. Nothing has been updated yet.",true);
+    setTimeout(()=>setProgress(100,"Preview ready. Review suggestions before accepting.",true),200);
+  }catch(err){
+    toast(err.message||String(err),"error");
+    setProgress(0,"Could not process file.",true);
+  }finally{
+    document.getElementById("processBtn").disabled=false;
   }
+}
 
-  var diff = Math.abs(invAmount - target);
-  var amountOK = diff <= CONFIG.amountTolerance;
+/* ========================== MATCHING ENGINE ================================ */
+function prField(rec,key){
+  const f=CONFIG.paymentRequisitionFields[key];
+  return rec ? rec[f] : null;
+}
 
-  var suggestions = [];
-  if(!vendorOK) suggestions.push('Vendor differs — PO/requisition shows "' + poVendor + '".');
-  if(!amountOK) suggestions.push("Amount differs from " + targetLabel + " by " + fmtMoney(diff, symbol) + ".");
-
-  var status = (vendorOK && amountOK) ? "ok" : "bad";
+function paymentRequisitionView(rec){
   return {
-    poNo: invoice.poNo, vendor: invoice.vendor, amount: invAmount,
-    poVendor: poVendor, poProject: poProject, target: target, targetLabel: targetLabel, symbol: symbol,
-    status: status, statusLabel: status === "ok" ? "Matched" : "Mismatch",
-    suggestion: suggestions.length ? suggestions.join(" ") : "All good — no changes needed."
+    id:String(rec.ID||""),
+    po:valueText(prField(rec,"po"),["PO_Number"]),
+    project:valueText(prField(rec,"project"),["Project_Code"]),
+    vendor:valueText(prField(rec,"vendor"),["Vendor_Display_Name","Vendor_Name"]),
+    eligible:cleanAmount(prField(rec,"eligible")),
+    requestDate:valueText(prField(rec,"requestDate")),
+    paymentType:valueText(prField(rec,"paymentType")),
+    requestStatus:valueText(prField(rec,"requestStatus")),
+    raw:rec
   };
 }
 
-function renderBulk(results){
-  var out = document.getElementById("bulkResults");
-  var html = '<table><tr><th>PO No</th><th>Vendor (file)</th><th>Amount (file)</th><th>Compared to</th><th>Status</th><th>Suggestion</th></tr>';
-  results.forEach(function(r){
-    html += '<tr>';
-    html += '<td>' + (r.poNo || "—") + '</td>';
-    html += '<td>' + (r.vendor || "—") + '</td>';
-    html += '<td>' + fmtMoney(r.amount) + '</td>';
-    html += '<td>' + (r.targetLabel ? r.targetLabel + ": " + fmtMoney(r.target, r.symbol) : "—") + '</td>';
-    html += '<td>' + pill(r.status, r.statusLabel) + '</td>';
-    html += '<td class="suggestion">' + r.suggestion + '</td>';
-    html += '</tr>';
-  });
-  html += '</table>';
-  out.innerHTML = html;
+function amountPoints(fileAmount,systemAmount){
+  const diff=Math.abs(fileAmount-systemAmount);
+  const p=amountDiffPct(fileAmount,systemAmount);
+  if(diff<=CONFIG.exactAmountTolerance) return 25;
+  if(p<=0.10) return 24;
+  if(p<=0.50) return 22;
+  if(p<=1) return 20;
+  if(p<=2) return 17;
+  if(p<=5) return 12;
+  if(p<=10) return 6;
+  return 0;
 }
 
-/* -------------------- Diagnostics -------------------- */
-function checkOneReport(reportName, configured, label){
-  return ZOHO.CREATOR.DATA.getRecords({ app_name: CONFIG.appName, report_name: reportName, max_records: 1000 })
-    .then(function(res){
-      var rows = (res && res.data) || [];
-      if(rows.length === 0){
-        return '<div class="note"><b>' + label + ':</b> connected, but got zero records back. app/report name is probably right, but the report may be empty or permissioned so this widget can\'t see rows.</div>';
-      }
-      var actualFields = Object.keys(rows[0]).filter(function(k){ return k.indexOf("_") !== 0 && k !== "ID"; });
-      var html = '<div class="note" style="margin-top:14px;"><b>' + label + '</b> (report: ' + reportName + ') — real field names on that record:</div>';
-      html += '<table style="margin-top:6px;"><tr><th>Field name Creator returned</th><th>Sample value</th><th>In CONFIG?</th></tr>';
-      actualFields.forEach(function(f){
-        var inConfig = configured.indexOf(f) !== -1;
-        html += '<tr><td>' + f + '</td><td>' + String(rows[0][f]).slice(0,40) + '</td><td>' + (inConfig ? pill("ok","yes") : pill("warn","not used")) + '</td></tr>';
-      });
-      html += '</table>';
-      var missing = configured.filter(function(c){ return actualFields.indexOf(c) === -1; });
-      if(missing.length){
-        html += '<div class="note" style="margin-top:8px;"><b>These CONFIG values don\'t match any real field name above — fix these:</b> ' + missing.join(", ") + '</div>';
-      }
-      return html;
-    })
-    .catch(function(err){
-      return '<div class="note"><b>' + label + ':</b> couldn\'t connect at all — appName or this report\'s name itself is likely wrong, or this widget can\'t read it.<br><b>Raw error:</b> ' + describeError(err) + '</div>';
-    });
+function scoreCandidate(inv,rec){
+  const c=paymentRequisitionView(rec);
+  const poSim=poSimilarity(inv.po,c.po);
+  const vendorSim=vendorSimilarity(inv.vendor,c.vendor);
+  const projectExact=normProject(inv.project)!=="" && normProject(inv.project)===normProject(c.project);
+  const poExact=normPO(inv.po)!=="" && normPO(inv.po)===normPO(c.po);
+  const vendorExact=normVendor(inv.vendor)!=="" && normVendor(inv.vendor)===normVendor(c.vendor);
+  const diff=Math.abs(inv.amount-c.eligible);
+  const diffPct=amountDiffPct(inv.amount,c.eligible);
+
+  let score=0;
+  if(poExact) score+=45;
+  else if(poSim>=.96) score+=40;
+  else if(poSim>=.90) score+=34;
+  else if(poSim>=.80) score+=24;
+  else if(poSim>=.70) score+=14;
+
+  if(vendorExact) score+=25;
+  else score+=Math.round(25*Math.max(0,Math.min(1,vendorSim)));
+
+  score+=amountPoints(inv.amount,c.eligible);
+  if(projectExact) score+=5;
+
+  score=Math.min(100,score);
+
+  const exact = poExact && vendorSim>=.96 && diff<=CONFIG.exactAmountTolerance &&
+    (normProject(inv.project)==="" || projectExact);
+
+  return {
+    rec:c,
+    score,
+    poExact,poSim,vendorExact,vendorSim,projectExact,diff,diffPct,exact
+  };
+}
+
+function reasonForCandidate(inv,c){
+  const p=[];
+  p.push(c.poExact ? "Exact PO match" : `PO similarity ${Math.round(c.poSim*100)}%`);
+  p.push(c.vendorExact ? "Exact normalized vendor match" : `Vendor similarity ${Math.round(c.vendorSim*100)}%`);
+  if(normProject(inv.project)!=="") p.push(c.projectExact ? "Project matched" : "Project differs");
+  p.push(c.diff<=CONFIG.exactAmountTolerance ? "Eligible Payment matched" : `Amount differs by ${money(c.diff)} (${pct(c.diffPct)})`);
+  return p.join(" · ");
+}
+
+function buildMatches(){
+  const all=STATE.paymentRequisitions;
+
+  STATE.results=STATE.importedRows.map((inv,index)=>{
+    const ranked=all
+      .map(rec=>scoreCandidate(inv,rec))
+      .filter(x=>x.poSim>=.45 || x.vendorSim>=.45 || x.projectExact)
+      .sort((a,b)=> b.score-a.score || a.diff-b.diff)
+      .slice(0,CONFIG.candidateCount);
+
+    const best=ranked[0]||null;
+
+    let status="not-found";
+    if(best){
+      if(best.exact) status="matched";
+      else if(best.score>=CONFIG.suggestedMinScore && best.poSim>=.80) status="suggested";
+      else if(best.score>=CONFIG.mismatchMinScore) status="mismatch";
+      else status="not-found";
+    }
+
+    return {
+      index,
+      inv,
+      candidates:ranked,
+      selectedCandidateIndex:best?0:null,
+      status,
+      originalStatus:status,
+      selected:false,
+      accepted:false,
+      rejected:false,
+      updateResult:null,
+      matchSource:best?"Automatic":"None",
+      reason:best?reasonForCandidate(inv,best):"No sufficiently similar Payment Requisition was found."
+    };
+  });
+
+  document.getElementById("statsSection").classList.remove("hidden");
+  document.getElementById("resultsCard").classList.remove("hidden");
+  updateStats();
+  renderTable();
+}
+
+function currentCandidate(r){
+  if(r.selectedCandidateIndex===null || r.selectedCandidateIndex===undefined) return null;
+  return r.candidates[r.selectedCandidateIndex]||null;
+}
+
+function updateStats(){
+  const total=STATE.results.length;
+  const count=s=>STATE.results.filter(r=>r.status===s).length;
+  document.getElementById("sTotal").textContent=total;
+  document.getElementById("sMatched").textContent=count("matched");
+  document.getElementById("sSuggested").textContent=count("suggested");
+  document.getElementById("sMismatch").textContent=count("mismatch");
+  document.getElementById("sNotFound").textContent=count("not-found");
+}
+
+function setFilter(filter,btn){
+  STATE.activeFilter=filter;
+  document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));
+  btn.classList.add("active");
+  renderTable();
+}
+
+function visibleResults(){
+  const q=document.getElementById("resultSearch").value.trim().toUpperCase();
+  return STATE.results.filter(r=>{
+    if(STATE.activeFilter==="accepted"){
+      if(!r.accepted) return false;
+    }else if(STATE.activeFilter!=="all" && r.status!==STATE.activeFilter) return false;
+    if(!q) return true;
+    const c=currentCandidate(r);
+    return [
+      r.inv.po,r.inv.vendor,r.inv.project,
+      c?.rec.po,c?.rec.vendor,c?.rec.project
+    ].join(" ").toUpperCase().includes(q);
+  });
+}
+
+function renderTable(){
+  const body=document.getElementById("resultBody");
+  const rows=visibleResults();
+  body.innerHTML="";
+  document.getElementById("emptyResults").classList.toggle("hidden",rows.length>0);
+
+  for(const r of rows){
+    const c=currentCandidate(r);
+    const tr=document.createElement("tr");
+    tr.className="data-row";
+    tr.innerHTML=`
+      <td><input class="check row-check" type="checkbox" ${r.selected?"checked":""} onchange="toggleRow(${r.index},this.checked)"></td>
+      <td><span class="status ${r.accepted?"accepted":r.status}">${r.accepted?"Accepted":statusLabel(r.status)}</span></td>
+      <td><div class="cell-main">${htmlEscape(r.inv.project||"—")}</div><div class="cell-sub">${c?htmlEscape(c.rec.project||""):""}</div></td>
+      <td><div class="cell-main">${htmlEscape(r.inv.po||"—")}</div><div class="cell-sub">${c?"Creator: "+htmlEscape(c.rec.po||""):"No candidate"}</div></td>
+      <td><div class="cell-main">${htmlEscape(r.inv.vendor||"—")}</div><div class="cell-sub">${c?"Creator: "+htmlEscape(c.rec.vendor||""):""}</div></td>
+      <td class="money">${money(r.inv.amount)}</td>
+      <td class="money">${c?money(c.rec.eligible):"—"}</td>
+      <td class="money">${c?money(c.diff):"—"}${c?`<div class="cell-sub">${pct(c.diffPct)}</div>`:""}</td>
+      <td class="score">${c?c.score:"—"}</td>
+      <td>${htmlEscape(r.matchSource)}</td>
+      <td><button class="link-btn" onclick="openDrawer(${r.index})">Review</button></td>
+    `;
+    body.appendChild(tr);
+  }
+}
+
+function toggleRow(index,checked){ STATE.results[index].selected=checked; }
+function toggleAllVisible(checked){
+  visibleResults().forEach(r=>r.selected=checked);
+  renderTable();
+}
+function selectRecommended(){
+  STATE.results.forEach(r=>{
+    const c=currentCandidate(r);
+    r.selected=!!c && (r.status==="matched" || (r.status==="suggested" && c.score>=CONFIG.strongSelectMinScore));
+  });
+  renderTable();
+}
+
+/* ============================ DRAWER ======================================= */
+function openDrawer(index){
+  STATE.drawerIndex=index;
+  const r=STATE.results[index];
+  const c=currentCandidate(r);
+  document.getElementById("drawerTitle").textContent=`${statusLabel(r.status)} · Row ${r.inv.rowNo}`;
+  document.getElementById("drawerSub").textContent=r.inv.po || "Uploaded payment row";
+  renderDrawerBody();
+  document.getElementById("drawerBackdrop").classList.add("open");
+  document.getElementById("drawer").classList.add("open");
+}
+
+function closeDrawer(){
+  document.getElementById("drawerBackdrop").classList.remove("open");
+  document.getElementById("drawer").classList.remove("open");
+  STATE.drawerIndex=null;
+}
+
+function markSymbol(ok,near){
+  if(ok) return ['yes','✓'];
+  if(near) return ['near','~'];
+  return ['no','✕'];
+}
+
+function renderDrawerBody(){
+  const r=STATE.results[STATE.drawerIndex];
+  const c=currentCandidate(r);
+  const body=document.getElementById("drawerBody");
+
+  let compare="";
+  if(c){
+    const poM=markSymbol(c.poExact,c.poSim>=.90);
+    const vM=markSymbol(c.vendorExact,c.vendorSim>=.85);
+    const pM=markSymbol(c.projectExact,normProject(r.inv.project)==="");
+    const aM=markSymbol(c.diff<=CONFIG.exactAmountTolerance,c.diffPct<=1);
+
+    compare=`
+      <div class="compare">
+        <div class="hdr">Field</div><div class="hdr">Uploaded file</div><div class="hdr">Selected Creator record</div><div class="hdr"></div>
+        <div class="field">PO Number</div><div>${htmlEscape(r.inv.po||"—")}</div><div>${htmlEscape(c.rec.po||"—")}</div><div class="${poM[0]}">${poM[1]}</div>
+        <div class="field">Project Code</div><div>${htmlEscape(r.inv.project||"—")}</div><div>${htmlEscape(c.rec.project||"—")}</div><div class="${pM[0]}">${pM[1]}</div>
+        <div class="field">Vendor</div><div>${htmlEscape(r.inv.vendor||"—")}</div><div>${htmlEscape(c.rec.vendor||"—")}</div><div class="${vM[0]}">${vM[1]}</div>
+        <div class="field">Eligible Payment</div><div>${money(r.inv.amount)}</div><div>${money(c.rec.eligible)}</div><div class="${aM[0]}">${aM[1]}</div>
+      </div>
+      <div class="reason">
+        <b>Match score: ${c.score}/100</b><br>
+        Difference: <b>${money(c.diff)}</b> (${pct(c.diffPct)})<br>
+        ${htmlEscape(reasonForCandidate(r.inv,c))}
+      </div>
+    `;
+  }else{
+    compare=`<div class="reason"><b>No selected Creator record.</b><br>${htmlEscape(r.reason)}</div>`;
+  }
+
+  const candidates=r.candidates.map((x,i)=>`
+    <label class="candidate ${r.selectedCandidateIndex===i?"selected":""}">
+      <input type="radio" name="candidate" ${r.selectedCandidateIndex===i?"checked":""} onchange="chooseCandidate(${i})">
+      <div class="candidate-main">
+        <div class="candidate-top">
+          <div class="candidate-po">${htmlEscape(x.rec.po||"—")}</div>
+          <div class="candidate-score">${x.score}%</div>
+        </div>
+        <div class="candidate-meta">${htmlEscape(x.rec.project||"—")} · ${htmlEscape(x.rec.vendor||"—")}</div>
+        <div class="candidate-meta">${htmlEscape(x.rec.paymentType||"")} ${x.rec.requestDate?"· "+htmlEscape(x.rec.requestDate):""}</div>
+        <div class="candidate-amount">${money(x.rec.eligible)} · diff ${money(x.diff)}</div>
+      </div>
+    </label>
+  `).join("");
+
+  body.innerHTML=`
+    <div class="section-title">Uploaded row vs selected match</div>
+    <div class="section-sub">You can change the selected Payment Requisition before accepting.</div>
+    ${compare}
+
+    <div class="candidate-head">
+      <div class="candidate-title">Similar Payment Requisitions</div>
+      <span class="cell-sub">${r.candidates.length} candidate(s)</span>
+    </div>
+    ${candidates || '<div class="empty">No candidate loaded yet.</div>'}
+
+    <div class="candidate-title" style="margin-top:16px">Search loaded Payment Requisitions</div>
+    <div class="manual-search">
+      <input id="manualCandidateSearch" placeholder="Search PO / vendor / project / amount..." oninput="renderManualCandidates()">
+    </div>
+    <div id="manualCandidates"></div>
+
+    <div class="reason">
+      <b>Important:</b> Accept Match never creates a new Payment_detals2 row.
+      It searches the existing Payment_detals2 data already loaded in this widget and updates that record only.
+    </div>
+  `;
+
+  document.getElementById("acceptCurrentBtn").disabled=!currentCandidate(r);
+}
+
+function chooseCandidate(candidateIndex){
+  const r=STATE.results[STATE.drawerIndex];
+  r.selectedCandidateIndex=candidateIndex;
+  r.matchSource=candidateIndex===0?"Automatic":"User Selected";
+  const c=currentCandidate(r);
+  if(c){
+    if(c.exact) r.status="matched";
+    else if(c.score>=CONFIG.suggestedMinScore && c.poSim>=.80) r.status="suggested";
+    else if(c.score>=CONFIG.mismatchMinScore) r.status="mismatch";
+    else r.status="not-found";
+    r.reason=reasonForCandidate(r.inv,c);
+  }
+  updateStats();
+  renderTable();
+  renderDrawerBody();
+}
+
+function renderManualCandidates(){
+  const q=(document.getElementById("manualCandidateSearch")?.value||"").trim().toUpperCase();
+  const out=document.getElementById("manualCandidates");
+  if(!q){out.innerHTML="";return}
+
+  const r=STATE.results[STATE.drawerIndex];
+  const found=STATE.paymentRequisitions
+    .map(rec=>scoreCandidate(r.inv,rec))
+    .filter(x=>[
+      x.rec.po,x.rec.vendor,x.rec.project,String(x.rec.eligible)
+    ].join(" ").toUpperCase().includes(q))
+    .sort((a,b)=>b.score-a.score||a.diff-b.diff)
+    .slice(0,10);
+
+  out.innerHTML=found.map(x=>`
+    <div class="candidate">
+      <div class="candidate-main">
+        <div class="candidate-top"><div class="candidate-po">${htmlEscape(x.rec.po||"—")}</div><div class="candidate-score">${x.score}%</div></div>
+        <div class="candidate-meta">${htmlEscape(x.rec.project||"—")} · ${htmlEscape(x.rec.vendor||"—")}</div>
+        <div class="candidate-amount">${money(x.rec.eligible)} · diff ${money(x.diff)}</div>
+      </div>
+      <button class="btn small" onclick='addManualCandidate(${JSON.stringify(x.rec.id)})'>Select</button>
+    </div>
+  `).join("") || '<div class="empty">No loaded Payment Requisition matches that search.</div>';
+}
+
+function addManualCandidate(id){
+  const r=STATE.results[STATE.drawerIndex];
+  const rec=STATE.paymentRequisitions.find(x=>String(x.ID)===String(id));
+  if(!rec) return;
+  const scored=scoreCandidate(r.inv,rec);
+  const existingIndex=r.candidates.findIndex(x=>x.rec.id===scored.rec.id);
+  if(existingIndex>=0){
+    chooseCandidate(existingIndex);
+    return;
+  }
+  r.candidates.push(scored);
+  r.selectedCandidateIndex=r.candidates.length-1;
+  r.matchSource="User Selected";
+  chooseCandidate(r.selectedCandidateIndex);
+}
+
+function rejectCurrent(){
+  const r=STATE.results[STATE.drawerIndex];
+  r.rejected=true;
+  r.selected=false;
+  r.status="mismatch";
+  r.matchSource="Rejected by User";
+  r.reason="User rejected the suggested match.";
+  updateStats();renderTable();closeDrawer();
+  toast("Match rejected. No Creator record was changed.");
+}
+
+/* ======================== PAYMENT DETAILS UPDATE =========================== */
+function pdView(rec){
+  const f=CONFIG.paymentDetailsFields;
+  return {
+    id:String(rec.ID||""),
+    po:valueText(rec[f.po],["PO_Number","PO_No"]),
+    vendor:valueText(rec[f.vendor],["Vendor_Display_Name","Vendor_Name"]),
+    paymentType:valueText(rec[f.paymentType]),
+    raw:rec
+  };
+}
+
+function findExistingPaymentDetail(result){
+  const c=currentCandidate(result);
+  if(!c) return null;
+
+  // Find existing details for the selected Creator PO.
+  let candidates=STATE.paymentDetails.map(pdView)
+    .filter(d=>normPO(d.po)===normPO(c.rec.po));
+
+  // Prefer same vendor.
+  const sameVendor=candidates.filter(d=>vendorSimilarity(d.vendor,c.rec.vendor)>=.90);
+  if(sameVendor.length) candidates=sameVendor;
+
+  // Prefer same payment type when it exists on both records.
+  if(c.rec.paymentType){
+    const sameType=candidates.filter(d=>String(d.paymentType||"").toUpperCase()===String(c.rec.paymentType||"").toUpperCase());
+    if(sameType.length) candidates=sameType;
+  }
+
+  return candidates[0] || null;
+}
+
+async function updateExistingPaymentDetail(result){
+  assertCreator();
+  const c=currentCandidate(result);
+  if(!c) throw new Error("No Payment Requisition is selected.");
+
+  const detail=findExistingPaymentDetail(result);
+  if(!detail){
+    throw new Error(`No existing Payment_detals2 record was found for ${c.rec.po}. Nothing was created.`);
+  }
+
+  const f=CONFIG.paymentDetailsFields;
+  const remarks = [
+    `Widget reconciliation (${result.matchSource}).`,
+    `Uploaded PO: ${result.inv.po}.`,
+    `Uploaded Vendor: ${result.inv.vendor}.`,
+    `Uploaded Amount: ${result.inv.amount}.`,
+    `Selected Payment Requisition ID: ${c.rec.id}.`,
+    `System Eligible Payment: ${c.rec.eligible}.`,
+    `Difference: ${c.diff}.`,
+    `Score: ${c.score}/100.`,
+    reasonForCandidate(result.inv,c)
+  ].join(" ");
+
+  const data={};
+  // A lookup can be updated with its selected record ID.
+  data[f.paymentRequisition]=c.rec.id;
+  data[f.importedAmount]=Number(result.inv.amount||0);
+  data[f.eligiblePayableAmount]=Number(c.rec.eligible||0);
+  data[f.amountDifference]=Number(c.diff||0);
+  data[f.differencePercentage]=Number(c.diffPct||0);
+  data[f.matchScore]=Number(c.score||0);
+  data[f.reconciliationStatus]=statusLabel(result.status);
+  data[f.matchRemarks]=remarks;
+  data[f.reconciledOn]=dateTimeForCreator();
+
+  const cfg={
+    app_name:CONFIG.appName,
+    report_name:CONFIG.paymentDetailsReport,
+    id:detail.id,
+    payload:{data}
+  };
+
+  const response=await ZOHO.CREATOR.DATA.updateRecordById(cfg);
+  if(response && response.code && response.code!==3000){
+    throw new Error(response.message||JSON.stringify(response));
+  }
+
+  result.accepted=true;
+  result.selected=false;
+  result.updateResult={paymentDetailId:detail.id,response};
+  result.matchSource=result.matchSource==="Automatic"?"Automatic Accepted":"User Selected";
+
+  // Mirror updated fields in memory so subsequent actions see current state.
+  Object.assign(detail.raw,data);
+  return detail;
+}
+
+async function acceptCurrent(){
+  if(STATE.drawerIndex===null) return;
+  const r=STATE.results[STATE.drawerIndex];
+  try{
+    document.getElementById("acceptCurrentBtn").disabled=true;
+    const detail=await updateExistingPaymentDetail(r);
+    toast(`Updated existing Payment_detals2 record ${detail.id}.`,"success");
+    renderTable();closeDrawer();
+  }catch(err){
+    toast(err.message||String(err),"error");
+    document.getElementById("acceptCurrentBtn").disabled=false;
+  }
+}
+
+async function acceptSelected(){
+  const selected=STATE.results.filter(r=>r.selected && !r.accepted && currentCandidate(r));
+  if(!selected.length){toast("Select at least one matched/suggested row first.");return}
+
+  let ok=0,fail=0;
+  for(let i=0;i<selected.length;i++){
+    try{
+      setProgress(Math.round((i/selected.length)*100),`Updating ${i+1} of ${selected.length} existing Payment_detals2 records...`,true);
+      await updateExistingPaymentDetail(selected[i]);
+      ok++;
+    }catch(err){
+      fail++;
+      selected[i].updateResult={error:err.message||String(err)};
+    }
+  }
+  setProgress(100,`Update finished: ${ok} succeeded, ${fail} failed.`,true);
+  renderTable();
+  toast(`Accepted ${ok} row(s). ${fail?fail+" failed.":""}`,fail?"error":"success");
+}
+
+/* ================================ EXPORT =================================== */
+function csvCell(v){return '"'+String(v??"").replace(/"/g,'""')+'"'}
+function exportResults(){
+  if(!STATE.results.length){toast("No reconciliation results to export.");return}
+  const head=["Row","Project","PO No","Vendor","File Amount","Creator PO","Creator Vendor","Creator Eligible Payment","Difference","Difference %","Score","Status","Match Source","Payment Requisition ID","Payment Detail Updated ID","Update Error"];
+  const lines=[head.map(csvCell).join(",")];
+  STATE.results.forEach(r=>{
+    const c=currentCandidate(r);
+    lines.push([
+      r.inv.rowNo,r.inv.project,r.inv.po,r.inv.vendor,r.inv.amount,
+      c?.rec.po||"",c?.rec.vendor||"",c?.rec.eligible??"",
+      c?.diff??"",c?.diffPct??"",c?.score??"",
+      r.accepted?"Accepted":statusLabel(r.status),r.matchSource,c?.rec.id||"",
+      r.updateResult?.paymentDetailId||"",r.updateResult?.error||""
+    ].map(csvCell).join(","));
+  });
+  const blob=new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download="payment-reconciliation-results.csv";
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+
+/* ============================== DIAGNOSTICS ================================ */
+function openDiagnostics(){
+  document.getElementById("diagModal").classList.remove("hidden");
+  runDiagnostics();
+}
+function closeDiagnostics(){document.getElementById("diagModal").classList.add("hidden")}
+
+function sampleFieldTable(rec,expected){
+  if(!rec) return "<div class='reason'>No record returned.</div>";
+  const keys=Object.keys(rec);
+  const rows=keys.map(k=>{
+    const used=expected.includes(k);
+    return `<tr><td>${htmlEscape(k)}</td><td>${htmlEscape(valueText(rec[k]).slice(0,90))}</td><td>${used?"✓ used":""}</td></tr>`;
+  }).join("");
+  const missing=expected.filter(x=>!keys.includes(x));
+  return `
+    ${missing.length?`<div class="reason"><b>Expected field(s) not present in this sample:</b> ${htmlEscape(missing.join(", "))}</div>`:""}
+    <div class="table-wrap" style="max-height:300px"><table style="min-width:600px">
+      <thead><tr><th>Creator field link name</th><th>Sample value</th><th>Config</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
 }
 
 function runDiagnostics(){
-  var out = document.getElementById("diagOut");
-  out.innerHTML = '<div class="empty">Checking…</div>';
-
-  var poConfigured = [CONFIG.poFields.poNo, CONFIG.poFields.vendor, CONFIG.poFields.project, CONFIG.poFields.amount];
-  var payConfigured = [CONFIG.paymentFields.poNo, CONFIG.paymentFields.vendor, CONFIG.paymentFields.project, CONFIG.paymentFields.eligiblePayment, CONFIG.paymentFields.paymentPercent, CONFIG.paymentFields.date];
-
-  Promise.all([
-    checkOneReport(CONFIG.poReport, poConfigured, "Purchase Order Report"),
-    checkOneReport(CONFIG.paymentReports[0].reportName, payConfigured, "Payment Requisitions — " + CONFIG.paymentReports[0].currencyLabel)
-  ]).then(function(parts){
-    out.innerHTML = parts.join("");
-  });
+  const out=document.getElementById("diagBody");
+  const prExpected=Object.values(CONFIG.paymentRequisitionFields);
+  const pdExpected=Object.values(CONFIG.paymentDetailsFields);
+  out.innerHTML=`
+    <div class="section-title">SDK / connection</div>
+    <div class="reason">
+      SDK present: <b>${!!(window.ZOHO&&ZOHO.CREATOR&&ZOHO.CREATOR.DATA)}</b><br>
+      Creator ready: <b>${STATE.creatorReady}</b><br>
+      App: <b>${htmlEscape(CONFIG.appName)}</b><br>
+      Payment Requisition report: <b>${htmlEscape(CONFIG.paymentRequisitionReport)}</b> (${STATE.paymentRequisitions.length} loaded)<br>
+      Payment Details report: <b>${htmlEscape(CONFIG.paymentDetailsReport)}</b> (${STATE.paymentDetails.length} loaded)
+    </div>
+    <div class="section-title" style="margin-top:16px">Payment Requisition sample field names</div>
+    ${sampleFieldTable(STATE.paymentRequisitions[0],prExpected)}
+    <div class="section-title" style="margin-top:16px">Payment_detals2 sample field names</div>
+    ${sampleFieldTable(STATE.paymentDetails[0],pdExpected)}
+    ${STATE.creatorError?`<div class="section-title" style="margin-top:16px">Last error</div><pre>${htmlEscape(STATE.creatorError.stack||STATE.creatorError.message||String(STATE.creatorError))}</pre>`:""}
+  `;
 }
 
-function exportResults(){
-  if(!lastResults.length){ return; }
-  var header = ["PO No","Vendor (file)","Amount (file)","Compared To","Compared Amount","Status","Suggestion"];
-  var lines = [header.join(",")];
-  lastResults.forEach(function(r){
-    var row = [r.poNo, r.vendor, r.amount, r.targetLabel || "", r.target || "", r.statusLabel, '"' + (r.suggestion||"").replace(/"/g,'""') + '"'];
-    lines.push(row.join(","));
-  });
-  var blob = new Blob([lines.join("\n")], { type: "text/csv" });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement("a");
-  a.href = url;
-  a.download = "po-reconciliation-results.csv";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+/* ============================== STARTUP ==================================== */
+window.addEventListener("load",async()=>{
+  // JS API v2 requires the V2 SDK script but no init() call.
+  // Give the SDK a short moment when the external page is being embedded.
+  await new Promise(r=>setTimeout(r,250));
+  try{
+    await refreshCreatorData();
+  }catch(err){
+    // refreshCreatorData already renders the error
+  }
+});
 </script>
 </body>
 </html>
