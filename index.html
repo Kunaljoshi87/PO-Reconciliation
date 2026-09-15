@@ -232,7 +232,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
     <div class="title-wrap">
       <div class="logo">PR</div>
       <div>
-        <h1>Payment Reconciliation Center</h1>
+        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v8</span></h1>
         <div class="subtitle">
           Upload an Excel/CSV payment list, compare each row with live Payment Requisition records,
           review exact and suggested matches, choose an alternate candidate when needed, and update
@@ -1705,8 +1705,14 @@ async function createPaymentDetail(result){
   const cfg={
     app_name:CONFIG.appName,
     form_name:CONFIG.paymentDetailsForm,
-    payload:{data}
+    payload:{
+      data:data,
+      skip_workflow:["form_workflow"]
+    }
   };
+
+  // Diagnostic: v8 never sends Reconciliation_Status itself.
+  console.log("Build v8 addRecords payload:", cfg);
 
   const response=await ZOHO.CREATOR.DATA.addRecords(cfg);
   if(response && response.code && response.code!==3000){
