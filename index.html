@@ -462,6 +462,16 @@ const CONFIG = {
   // No record will be created if there is no existing Payment_detals2 record.
   allowCreatePaymentDetail: true,
 
+  // Creator-safe write settings.
+  // "Matched" must exist as an exact choice in Reconciliation_Status.
+  acceptedReconciliationStatus: "Matched",
+
+  // Your Amount_Difference field visually supports about ##,###,###.##
+  // (7 integer digits + 2 decimals). If a difference is larger than this,
+  // the widget keeps the full value in Match_Remarks and skips writing the
+  // numeric Amount_Difference field so record creation does not fail.
+  amountDifferenceMax: 9999999.99,
+
   // Flexible file-column aliases. Users can upload files with different
   // capitalization, spaces, punctuation, ₹ / Rs / INR / $ formats, etc.
   importAliases: {
@@ -666,6 +676,11 @@ function money(n){
   return "₹ " + Number(n||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 function pct(n){ return Number(n||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:3}) + "%"; }
+
+function round2(n){
+  n=Number(n||0);
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
 
 function dateTimeForCreator(){
   // Uses common dd-MMM-yyyy HH:mm:ss style. If your app uses a different
@@ -1643,11 +1658,24 @@ async function createPaymentDetail(result){
   if(String(result.inv.accountNumber||"").trim()) data[f.accountNumber]=String(result.inv.accountNumber).trim();
   if(String(result.inv.chequeNo||"").trim()) data[f.chequeNo]=String(result.inv.chequeNo).trim();
 
-  data[f.importedAmount]=Number(result.inv.amount||0);
-  data[f.amountDifference]=Number(c.diff||0);
-  data[f.differencePercentage]=Number(c.diffPct||0);
+  data[f.importedAmount]=round2(result.inv.amount||0);
+
+  // Amount_Difference can fail Creator validation when the field's maximum
+  // digits are smaller than the calculated difference. Write it only when
+  // it fits; the full difference is always retained in Match_Remarks below.
+  const safeDifference=round2(c.diff||0);
+  if(Math.abs(safeDifference) <= CONFIG.amountDifferenceMax){
+    data[f.amountDifference]=safeDifference;
+  }
+
+  data[f.differencePercentage]=round2(c.diffPct||0);
   data[f.matchScore]=Number(c.score||0);
-  data[f.reconciliationStatus]=statusLabel(result.status);
+
+  // Once the user explicitly clicks Accept, the created payment record is a
+  // confirmed match. This avoids passing non-configured dropdown values such
+  // as "Suggested Match" into Reconciliation_Status.
+  data[f.reconciliationStatus]=CONFIG.acceptedReconciliationStatus;
+
   data[f.reconciledOn]=dateTimeForCreator();
 
   const remarks=[
@@ -1660,7 +1688,11 @@ async function createPaymentDetail(result){
     result.inv.transactionId ? `Transaction ID: ${result.inv.transactionId}.` : "",
     `Matched Payment Requisition ID: ${c.rec.id}.`,
     `Eligible Payment: ${c.rec.eligible}.`,
-    `Difference: ${c.diff}.`,
+    `Original Widget Classification: ${statusLabel(result.status)}.`,
+    `Difference: ${round2(c.diff)}.`,
+    Math.abs(round2(c.diff)) > CONFIG.amountDifferenceMax
+      ? `Amount Difference was too large for the Creator Amount_Difference field and was kept in remarks only.`
+      : "",
     `Score: ${c.score}/100.`,
     reasonForCandidate(result.inv,c),
     result.inv.remark ? `Imported Note: ${result.inv.remark}` : ""
@@ -1677,7 +1709,8 @@ async function createPaymentDetail(result){
 
   const response=await ZOHO.CREATOR.DATA.addRecords(cfg);
   if(response && response.code && response.code!==3000){
-    throw new Error(response.message||JSON.stringify(response));
+    const creatorErrors = Array.isArray(response.error) ? response.error.join(" | ") : "";
+    throw new Error(creatorErrors || response.message || JSON.stringify(response));
   }
 
   const newId=String(response?.data?.ID || "");
