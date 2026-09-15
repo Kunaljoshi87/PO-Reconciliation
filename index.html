@@ -252,7 +252,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
       <div class="section-title">1. Upload payment file</div>
       <div class="section-sub">
         Accepted: .xlsx, .xls, .csv. Required columns: PO No, Vendor Name, Eligible Payment.
-        Project Code is strongly recommended. Nothing is written to Creator at this stage.
+        Project Code is strongly recommended. Nothing is written to Creator until you click Accept Selected / Accept Selected Match.
       </div>
 
       <div id="dropzone" class="dropzone">
@@ -384,6 +384,11 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
         <b>Project Code</b><select id="mapProject" class="searchbox"></select>
         <b>Payment Date</b><select id="mapDate" class="searchbox"></select>
         <b>Payment Type</b><select id="mapType" class="searchbox"></select>
+        <b>UTR No</b><select id="mapUTR" class="searchbox"></select>
+        <b>Transaction ID</b><select id="mapTransactionId" class="searchbox"></select>
+        <b>Account Number</b><select id="mapAccountNumber" class="searchbox"></select>
+        <b>Cheque No</b><select id="mapChequeNo" class="searchbox"></select>
+        <b>Remark / Note</b><select id="mapRemark" class="searchbox"></select>
       </div>
       <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:8px">
         <button class="btn" onclick="closeMapping()">Cancel</button>
@@ -421,14 +426,25 @@ const CONFIG = {
     requestStatus: "Payment_Request_Status"
   },
 
-  paymentDetailsReport: "Payment_detals2_Report",
+  paymentDetailsForm: "Payment_detals2",
+  paymentDetailsReport: "All_Payment_Details_INR",
   paymentDetailsFields: {
+    paymentRequisition: "Payment_Requisition",
     po: "PO_No",
     vendor: "Vendor_Name",
+    requestDate: "Payment_Request_Date",
     paymentType: "Payment_Type",
-    paymentRequisition: "Payment_Requisition",
-    importedAmount: "Imported_Amount",
+    requestBasicAmount: "Request_Basic_Amount",
+    approvedAmount: "Approved_Amount",
+    percentage: "Percentage",
     eligiblePayableAmount: "Eligible_Payable_Amount",
+    paymentDone: "Payment_Done",
+    utr: "UTR_No",
+    transactionId: "Transaction_ID",
+    accountNumber: "Account_Number",
+    chequeNo: "Cheque_No",
+    remarkNote: "Remark_Note",
+    importedAmount: "Imported_Amount",
     amountDifference: "Amount_Difference",
     differencePercentage: "Difference_Percentage",
     matchScore: "Match_Score",
@@ -444,7 +460,7 @@ const CONFIG = {
   candidateCount: 5,
 
   // No record will be created if there is no existing Payment_detals2 record.
-  allowCreatePaymentDetail: false,
+  allowCreatePaymentDetail: true,
 
   // Flexible file-column aliases. Users can upload files with different
   // capitalization, spaces, punctuation, ₹ / Rs / INR / $ formats, etc.
@@ -468,6 +484,22 @@ const CONFIG = {
     ],
     type: [
       "payment type","type","payment category","category"
+    ],
+    utr: [
+      "utr no","utr","utr number","bank reference","bank ref","reference no",
+      "reference number","bank transaction reference"
+    ],
+    transactionId: [
+      "transaction id","txn id","transaction no","transaction number","bank transaction id"
+    ],
+    accountNumber: [
+      "account number","account no","a c no","ac no","bank account number"
+    ],
+    chequeNo: [
+      "cheque no","cheque number","check no","check number"
+    ],
+    remark: [
+      "remark","remarks","remark note","note","narration","description"
     ]
   }
 };
@@ -950,6 +982,11 @@ function parseImportedRows(rows){
   const projectCol=detectColumn(headers,CONFIG.importAliases.project);
   const dateCol=detectColumn(headers,CONFIG.importAliases.date);
   const typeCol=detectColumn(headers,CONFIG.importAliases.type);
+  const utrCol=detectColumn(headers,CONFIG.importAliases.utr);
+  const transactionIdCol=detectColumn(headers,CONFIG.importAliases.transactionId);
+  const accountNumberCol=detectColumn(headers,CONFIG.importAliases.accountNumber);
+  const chequeNoCol=detectColumn(headers,CONFIG.importAliases.chequeNo);
+  const remarkCol=detectColumn(headers,CONFIG.importAliases.remark);
 
   if(!poCol || !vendorCol || !amountCol){
     throw new Error(
@@ -983,6 +1020,11 @@ function parseImportedRows(rows){
       amount:cleanAmount(r[amountCol]),
       paymentDate:dateCol?r[dateCol]:"",
       paymentType:typeCol?r[typeCol]:"",
+      utr:utrCol?r[utrCol]:"",
+      transactionId:transactionIdCol?r[transactionIdCol]:"",
+      accountNumber:accountNumberCol?r[accountNumberCol]:"",
+      chequeNo:chequeNoCol?r[chequeNoCol]:"",
+      remark:remarkCol?r[remarkCol]:"",
       source:r
     });
   });
@@ -1075,7 +1117,7 @@ function openMapping(sheets){
     .concat(visibleHeaders.map(h=>`<option value="${htmlEscape(h)}">${htmlEscape(h)}</option>`))
     .join("");
 
-  ["mapPO","mapVendor","mapAmount","mapProject","mapDate","mapType"].forEach(id=>{
+  ["mapPO","mapVendor","mapAmount","mapProject","mapDate","mapType","mapUTR","mapTransactionId","mapAccountNumber","mapChequeNo","mapRemark"].forEach(id=>{
     document.getElementById(id).innerHTML=opts;
   });
 
@@ -1086,6 +1128,11 @@ function openMapping(sheets){
   document.getElementById("mapProject").value=detectColumn(headers,CONFIG.importAliases.project)||"";
   document.getElementById("mapDate").value=detectColumn(headers,CONFIG.importAliases.date)||"";
   document.getElementById("mapType").value=detectColumn(headers,CONFIG.importAliases.type)||"";
+  document.getElementById("mapUTR").value=detectColumn(headers,CONFIG.importAliases.utr)||"";
+  document.getElementById("mapTransactionId").value=detectColumn(headers,CONFIG.importAliases.transactionId)||"";
+  document.getElementById("mapAccountNumber").value=detectColumn(headers,CONFIG.importAliases.accountNumber)||"";
+  document.getElementById("mapChequeNo").value=detectColumn(headers,CONFIG.importAliases.chequeNo)||"";
+  document.getElementById("mapRemark").value=detectColumn(headers,CONFIG.importAliases.remark)||"";
 
   document.getElementById("mappingSheetInfo").textContent=
     `Sheet: ${bestSheet.name} · header row candidate: ${bestRowIndex+1}`;
@@ -1107,6 +1154,11 @@ function applyManualMapping(){
   const projectCol=document.getElementById("mapProject").value;
   const dateCol=document.getElementById("mapDate").value;
   const typeCol=document.getElementById("mapType").value;
+  const utrCol=document.getElementById("mapUTR").value;
+  const transactionIdCol=document.getElementById("mapTransactionId").value;
+  const accountNumberCol=document.getElementById("mapAccountNumber").value;
+  const chequeNoCol=document.getElementById("mapChequeNo").value;
+  const remarkCol=document.getElementById("mapRemark").value;
 
   if(!poCol || !vendorCol || !amountCol){
     toast("PO Number, Vendor Name and Amount are required mappings.","error");
@@ -1427,8 +1479,9 @@ function renderDrawerBody(){
     <div id="manualCandidates"></div>
 
     <div class="reason">
-      <b>Important:</b> Accept Match never creates a new Payment_detals2 row.
-      It searches the existing Payment_detals2 data already loaded in this widget and updates that record only.
+      <b>What happens on Accept:</b> a new record is created in <b>Payment_detals2</b>
+      and linked to the selected Payment Requisition. The uploaded bank amount becomes
+      <b>Payment Done</b>. UTR / Transaction ID are also saved when present in the file.
     </div>
   `;
 
@@ -1505,7 +1558,16 @@ function rejectCurrent(){
   toast("Match rejected. No Creator record was changed.");
 }
 
-/* ======================== PAYMENT DETAILS UPDATE =========================== */
+/* ======================= PAYMENT DETAILS CREATION =========================== */
+function firstRawValue(raw,names){
+  for(const n of names){
+    if(raw && raw[n] !== undefined && raw[n] !== null && String(valueText(raw[n])).trim()!==""){
+      return raw[n];
+    }
+  }
+  return null;
+}
+
 function pdView(rec){
   const f=CONFIG.paymentDetailsFields;
   return {
@@ -1513,86 +1575,119 @@ function pdView(rec){
     po:valueText(rec[f.po],["PO_Number","PO_No"]),
     vendor:valueText(rec[f.vendor],["Vendor_Display_Name","Vendor_Name"]),
     paymentType:valueText(rec[f.paymentType]),
+    utr:valueText(rec[f.utr]),
+    transactionId:valueText(rec[f.transactionId]),
+    paymentRequisitionId:lookupId(rec[f.paymentRequisition]),
+    paymentDone:cleanAmount(rec[f.paymentDone]),
     raw:rec
   };
 }
 
-function findExistingPaymentDetail(result){
-  const c=currentCandidate(result);
-  if(!c) return null;
+function findDuplicatePaymentDetail(result){
+  const uploadedUTR=String(result.inv.utr||"").trim().toUpperCase();
+  const uploadedTxn=String(result.inv.transactionId||"").trim().toUpperCase();
 
-  // Find existing details for the selected Creator PO.
-  let candidates=STATE.paymentDetails.map(pdView)
-    .filter(d=>normPO(d.po)===normPO(c.rec.po));
-
-  // Prefer same vendor.
-  const sameVendor=candidates.filter(d=>vendorSimilarity(d.vendor,c.rec.vendor)>=.90);
-  if(sameVendor.length) candidates=sameVendor;
-
-  // Prefer same payment type when it exists on both records.
-  if(c.rec.paymentType){
-    const sameType=candidates.filter(d=>String(d.paymentType||"").toUpperCase()===String(c.rec.paymentType||"").toUpperCase());
-    if(sameType.length) candidates=sameType;
+  for(const rec of STATE.paymentDetails){
+    const d=pdView(rec);
+    if(uploadedUTR && String(d.utr||"").trim().toUpperCase()===uploadedUTR){
+      return {record:d,reason:"Same UTR No already exists"};
+    }
+    if(uploadedTxn && String(d.transactionId||"").trim().toUpperCase()===uploadedTxn){
+      return {record:d,reason:"Same Transaction ID already exists"};
+    }
   }
-
-  return candidates[0] || null;
+  return null;
 }
 
-async function updateExistingPaymentDetail(result){
+async function createPaymentDetail(result){
   assertCreator();
   const c=currentCandidate(result);
   if(!c) throw new Error("No Payment Requisition is selected.");
 
-  const detail=findExistingPaymentDetail(result);
-  if(!detail){
-    throw new Error(`No existing Payment_detals2 record was found for ${c.rec.po}. Nothing was created.`);
+  const duplicate=findDuplicatePaymentDetail(result);
+  if(duplicate){
+    throw new Error(`${duplicate.reason} in Payment Details (record ${duplicate.record.id}). Record was not created again.`);
   }
 
+  const prRaw=c.rec.raw || {};
   const f=CONFIG.paymentDetailsFields;
-  const remarks = [
-    `Widget reconciliation (${result.matchSource}).`,
-    `Uploaded PO: ${result.inv.po}.`,
-    `Uploaded Vendor: ${result.inv.vendor}.`,
-    `Uploaded Amount: ${result.inv.amount}.`,
-    `Selected Payment Requisition ID: ${c.rec.id}.`,
-    `System Eligible Payment: ${c.rec.eligible}.`,
-    `Difference: ${c.diff}.`,
-    `Score: ${c.score}/100.`,
-    reasonForCandidate(result.inv,c)
-  ].join(" ");
+
+  const poId=lookupId(prRaw[CONFIG.paymentRequisitionFields.po]);
+  const vendorId=lookupId(prRaw[CONFIG.paymentRequisitionFields.vendor]);
+
+  if(!poId) throw new Error("Selected Payment Requisition did not return a PO lookup ID.");
+  if(!vendorId) throw new Error("Selected Payment Requisition did not return a Vendor lookup ID.");
 
   const data={};
-  // A lookup can be updated with its selected record ID.
+
   data[f.paymentRequisition]=c.rec.id;
-  data[f.importedAmount]=Number(result.inv.amount||0);
+  data[f.po]=poId;
+  data[f.vendor]=vendorId;
+
+  if(c.rec.requestDate) data[f.requestDate]=c.rec.requestDate;
+  if(c.rec.paymentType) data[f.paymentType]=c.rec.paymentType;
+
+  const basic=firstRawValue(prRaw,["Basic","Request_Basic_Amount","Subtotal","Sub_Total"]);
+  const approved=firstRawValue(prRaw,["Total","Approved_Amount","Payable_Amount"]);
+  const percent=firstRawValue(prRaw,["Payment_Percentage","Payment","Percentage"]);
+
+  if(basic!==null) data[f.requestBasicAmount]=cleanAmount(basic);
+  if(approved!==null) data[f.approvedAmount]=cleanAmount(approved);
+  if(percent!==null && String(valueText(percent)).trim()!=="") data[f.percentage]=cleanAmount(percent);
+
   data[f.eligiblePayableAmount]=Number(c.rec.eligible||0);
+  data[f.paymentDone]=Number(result.inv.amount||0);
+
+  if(String(result.inv.utr||"").trim()) data[f.utr]=String(result.inv.utr).trim();
+  if(String(result.inv.transactionId||"").trim()) data[f.transactionId]=String(result.inv.transactionId).trim();
+  if(String(result.inv.accountNumber||"").trim()) data[f.accountNumber]=String(result.inv.accountNumber).trim();
+  if(String(result.inv.chequeNo||"").trim()) data[f.chequeNo]=String(result.inv.chequeNo).trim();
+
+  data[f.importedAmount]=Number(result.inv.amount||0);
   data[f.amountDifference]=Number(c.diff||0);
   data[f.differencePercentage]=Number(c.diffPct||0);
   data[f.matchScore]=Number(c.score||0);
   data[f.reconciliationStatus]=statusLabel(result.status);
-  data[f.matchRemarks]=remarks;
   data[f.reconciledOn]=dateTimeForCreator();
+
+  const remarks=[
+    "Created from Payment Reconciliation Widget.",
+    `Match Source: ${result.matchSource}.`,
+    `Uploaded PO: ${result.inv.po}.`,
+    `Uploaded Vendor: ${result.inv.vendor}.`,
+    `Uploaded Bank Amount: ${result.inv.amount}.`,
+    result.inv.utr ? `UTR: ${result.inv.utr}.` : "",
+    result.inv.transactionId ? `Transaction ID: ${result.inv.transactionId}.` : "",
+    `Matched Payment Requisition ID: ${c.rec.id}.`,
+    `Eligible Payment: ${c.rec.eligible}.`,
+    `Difference: ${c.diff}.`,
+    `Score: ${c.score}/100.`,
+    reasonForCandidate(result.inv,c),
+    result.inv.remark ? `Imported Note: ${result.inv.remark}` : ""
+  ].filter(Boolean).join(" ");
+
+  data[f.matchRemarks]=remarks;
+  if(String(result.inv.remark||"").trim()) data[f.remarkNote]=String(result.inv.remark).trim();
 
   const cfg={
     app_name:CONFIG.appName,
-    report_name:CONFIG.paymentDetailsReport,
-    id:detail.id,
+    form_name:CONFIG.paymentDetailsForm,
     payload:{data}
   };
 
-  const response=await ZOHO.CREATOR.DATA.updateRecordById(cfg);
+  const response=await ZOHO.CREATOR.DATA.addRecords(cfg);
   if(response && response.code && response.code!==3000){
     throw new Error(response.message||JSON.stringify(response));
   }
 
+  const newId=String(response?.data?.ID || "");
   result.accepted=true;
   result.selected=false;
-  result.updateResult={paymentDetailId:detail.id,response};
-  result.matchSource=result.matchSource==="Automatic"?"Automatic Accepted":"User Selected";
+  result.updateResult={paymentDetailId:newId,response};
+  result.matchSource=result.matchSource==="Automatic" ? "Automatic Accepted" : "User Selected";
 
-  // Mirror updated fields in memory so subsequent actions see current state.
-  Object.assign(detail.raw,data);
-  return detail;
+  STATE.paymentDetails.push(Object.assign({ID:newId},data));
+  return {id:newId,response,data};
 }
 
 async function acceptCurrent(){
@@ -1600,8 +1695,8 @@ async function acceptCurrent(){
   const r=STATE.results[STATE.drawerIndex];
   try{
     document.getElementById("acceptCurrentBtn").disabled=true;
-    const detail=await updateExistingPaymentDetail(r);
-    toast(`Updated existing Payment_detals2 record ${detail.id}.`,"success");
+    const created=await createPaymentDetail(r);
+    toast(`Payment Details record ${created.id || "created"} successfully.`,"success");
     renderTable();closeDrawer();
   }catch(err){
     toast(err.message||String(err),"error");
@@ -1616,24 +1711,25 @@ async function acceptSelected(){
   let ok=0,fail=0;
   for(let i=0;i<selected.length;i++){
     try{
-      setProgress(Math.round((i/selected.length)*100),`Updating ${i+1} of ${selected.length} existing Payment_detals2 records...`,true);
-      await updateExistingPaymentDetail(selected[i]);
+      setProgress(Math.round((i/selected.length)*100),`Creating Payment Details ${i+1} of ${selected.length}...`,true);
+      await createPaymentDetail(selected[i]);
       ok++;
     }catch(err){
       fail++;
       selected[i].updateResult={error:err.message||String(err)};
     }
   }
-  setProgress(100,`Update finished: ${ok} succeeded, ${fail} failed.`,true);
+  setProgress(100,`Creation finished: ${ok} created, ${fail} failed.`,true);
   renderTable();
-  toast(`Accepted ${ok} row(s). ${fail?fail+" failed.":""}`,fail?"error":"success");
+  toast(`Created ${ok} Payment Details record(s). ${fail?fail+" failed.":""}`,fail?"error":"success");
 }
+
 
 /* ================================ EXPORT =================================== */
 function csvCell(v){return '"'+String(v??"").replace(/"/g,'""')+'"'}
 function exportResults(){
   if(!STATE.results.length){toast("No reconciliation results to export.");return}
-  const head=["Row","Project","PO No","Vendor","File Amount","Creator PO","Creator Vendor","Creator Eligible Payment","Difference","Difference %","Score","Status","Match Source","Payment Requisition ID","Payment Detail Updated ID","Update Error"];
+  const head=["Row","Project","PO No","Vendor","File Amount","Creator PO","Creator Vendor","Creator Eligible Payment","Difference","Difference %","Score","Status","Match Source","Payment Requisition ID","Payment Detail Created ID","Update Error"];
   const lines=[head.map(csvCell).join(",")];
   STATE.results.forEach(r=>{
     const c=currentCandidate(r);
