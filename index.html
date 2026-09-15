@@ -363,6 +363,36 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
   </div>
 </div>
 
+
+<div id="mappingModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-head">
+      <strong>Map Excel Columns</strong>
+      <button class="btn small" onclick="closeMapping()">Close</button>
+    </div>
+    <div class="modal-body">
+      <div class="reason">
+        Auto-detection could not confidently identify the required columns.
+        Choose the correct Excel column for each field below. This lets users
+        upload files even when headings are named differently.
+      </div>
+      <div id="mappingSheetInfo" class="section-sub" style="margin-top:12px"></div>
+      <div style="display:grid;grid-template-columns:180px 1fr;gap:10px;align-items:center">
+        <b>PO Number *</b><select id="mapPO" class="searchbox"></select>
+        <b>Vendor Name *</b><select id="mapVendor" class="searchbox"></select>
+        <b>Eligible / Payment Amount *</b><select id="mapAmount" class="searchbox"></select>
+        <b>Project Code</b><select id="mapProject" class="searchbox"></select>
+        <b>Payment Date</b><select id="mapDate" class="searchbox"></select>
+        <b>Payment Type</b><select id="mapType" class="searchbox"></select>
+      </div>
+      <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn" onclick="closeMapping()">Cancel</button>
+        <button class="btn primary" onclick="applyManualMapping()">Use This Mapping</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toastWrap" class="toast-wrap"></div>
 
 <script>
@@ -414,7 +444,32 @@ const CONFIG = {
   candidateCount: 5,
 
   // No record will be created if there is no existing Payment_detals2 record.
-  allowCreatePaymentDetail: false
+  allowCreatePaymentDetail: false,
+
+  // Flexible file-column aliases. Users can upload files with different
+  // capitalization, spaces, punctuation, ₹ / Rs / INR / $ formats, etc.
+  importAliases: {
+    po: [
+      "po no","po number","po","po#","p.o. no","p.o no",
+      "purchase order","purchase order no","purchase order number","order no","order number"
+    ],
+    vendor: [
+      "vendor name","vendor","supplier name","supplier","party name","party","payee","beneficiary"
+    ],
+    amount: [
+      "eligible payment","eligible amount","payment amount","amount","payable amount",
+      "approved amount","net amount","paid amount","invoice amount","total amount"
+    ],
+    project: [
+      "project code","project","project cod","proj code","proj. code","job code","project no","project number"
+    ],
+    date: [
+      "payment request date","payment date","request date","date","transaction date","paid date"
+    ],
+    type: [
+      "payment type","type","payment category","category"
+    ]
+  }
 };
 
 /* ============================== STATE ====================================== */
@@ -427,7 +482,9 @@ const STATE = {
   results: [],
   currentFile: null,
   activeFilter: "all",
-  drawerIndex: null
+  drawerIndex: null,
+  pendingSheets: null,
+  pendingManualTable: null
 };
 
 /* ============================= HELPERS ===================================== */
@@ -470,16 +527,32 @@ function lookupId(v){
 function cleanAmount(raw){
   if(raw === null || raw === undefined || raw === "") return 0;
   if(typeof raw === "number") return isFinite(raw) ? raw : 0;
-  let s = String(raw).trim();
-  // Parentheses as negative
-  const neg = /^\(.*\)$/.test(s);
-  s = s.replace(/[₹$€£]/g,"").replace(/\b(INR|USD|RS|RUPEES?)\b/gi,"");
-  s = s.replace(/,/g,"").replace(/[^\d.\-]/g,"");
-  const parts = s.split(".");
-  if(parts.length > 2) s = parts.slice(0,-1).join("") + "." + parts[parts.length-1];
-  let n = parseFloat(s);
-  if(!isFinite(n)) n = 0;
-  return neg ? -Math.abs(n) : n;
+
+  let s=String(raw).trim();
+  if(!s) return 0;
+
+  // Handle negatives like (1,234.50)
+  const negative=/^\s*\(.*\)\s*$/.test(s);
+
+  // Normalize unicode spaces/dashes and common currency wording.
+  s=s
+    .replace(/\u00A0/g," ")
+    .replace(/[₹₨]/g," ")
+    .replace(/\$/g," ")
+    .replace(/\b(INR|INR\.|RS|RS\.|RUPEE|RUPEES|USD|US\$|DOLLAR|DOLLARS)\b/gi," ")
+    .replace(/,/g,"")
+    .replace(/\s+/g,"")
+    .replace(/[^\d.\-]/g,"");
+
+  // If multiple dots remain, keep the last one as decimal separator.
+  const parts=s.split(".");
+  if(parts.length>2){
+    s=parts.slice(0,-1).join("")+"."+parts[parts.length-1];
+  }
+
+  let n=parseFloat(s);
+  if(!isFinite(n)) n=0;
+  return negative ? -Math.abs(n) : n;
 }
 
 function normPO(v){
@@ -730,18 +803,30 @@ function readWorkbook(file){
 }
 
 function canonicalHeader(h){
-  return String(h||"").toLowerCase().replace(/[_\-]+/g," ").replace(/\s+/g," ").trim();
+  return String(h||"")
+    .toLowerCase()
+    .replace(/[₹$€£]/g," ")
+    .replace(/[._\-/#:()]+/g," ")
+    .replace(/\s+/g," ")
+    .trim();
 }
+
 function detectColumn(headers,candidates){
   const canon=headers.map(h=>({raw:h,c:canonicalHeader(h)}));
-  for(const wanted of candidates){
-    const exact=canon.find(x=>x.c===wanted);
+  const wanted=(candidates||[]).map(canonicalHeader);
+
+  // Exact normalized header first.
+  for(const w of wanted){
+    const exact=canon.find(x=>x.c===w);
     if(exact) return exact.raw;
   }
-  for(const wanted of candidates){
-    const contains=canon.find(x=>x.c.includes(wanted));
+
+  // Then token/contains match.
+  for(const w of wanted){
+    const contains=canon.find(x=>x.c.includes(w) || w.includes(x.c));
     if(contains) return contains.raw;
   }
+
   return null;
 }
 
@@ -749,13 +834,15 @@ function headerSignal(row){
   const cells=(row||[]).map(c=>canonicalHeader(c)).filter(Boolean);
   if(!cells.length) return 0;
 
-  const has = words => cells.some(c=>words.some(w=>c===w || c.includes(w)));
+  const hasAlias = aliases => cells.some(cell =>
+    aliases.map(canonicalHeader).some(a => cell===a || cell.includes(a) || a.includes(cell))
+  );
 
   let score=0;
-  if(has(["po no","po number","purchase order","po"])) score++;
-  if(has(["vendor name","vendor","supplier name","supplier"])) score++;
-  if(has(["eligible payment","eligible amount","payment amount","amount"])) score++;
-  if(has(["project code","project","project cod"])) score++;
+  if(hasAlias(CONFIG.importAliases.po)) score++;
+  if(hasAlias(CONFIG.importAliases.vendor)) score++;
+  if(hasAlias(CONFIG.importAliases.amount)) score++;
+  if(hasAlias(CONFIG.importAliases.project)) score++;
   return score;
 }
 
@@ -827,9 +914,9 @@ function findBestImportTable(sheets){
     if(!parsed) continue;
 
     const headers=parsed.headers;
-    const poCol=detectColumn(headers,["po no","po number","purchase order","po"]);
-    const vendorCol=detectColumn(headers,["vendor name","vendor","supplier name","supplier"]);
-    const amountCol=detectColumn(headers,["eligible payment","eligible amount","payment amount","amount"]);
+    const poCol=detectColumn(headers,CONFIG.importAliases.po);
+    const vendorCol=detectColumn(headers,CONFIG.importAliases.vendor);
+    const amountCol=detectColumn(headers,CONFIG.importAliases.amount);
 
     const score=(poCol?1:0)+(vendorCol?1:0)+(amountCol?1:0);
     if(!best || score>best.score || (score===best.score && parsed.objects.length>best.parsed.objects.length)){
@@ -857,29 +944,50 @@ function parseImportedRows(rows){
   if(!rows.length) throw new Error("No data rows were found below the detected header.");
   const headers=Object.keys(rows[0]);
 
-  const poCol=detectColumn(headers,["po no","po number","purchase order","po"]);
-  const vendorCol=detectColumn(headers,["vendor name","vendor","supplier name","supplier"]);
-  const amountCol=detectColumn(headers,["eligible payment","eligible amount","payment amount","amount"]);
-  const projectCol=detectColumn(headers,["project code","project","project cod"]);
-  const dateCol=detectColumn(headers,["payment request date","payment date","date"]);
-  const typeCol=detectColumn(headers,["payment type","type"]);
+  const poCol=detectColumn(headers,CONFIG.importAliases.po);
+  const vendorCol=detectColumn(headers,CONFIG.importAliases.vendor);
+  const amountCol=detectColumn(headers,CONFIG.importAliases.amount);
+  const projectCol=detectColumn(headers,CONFIG.importAliases.project);
+  const dateCol=detectColumn(headers,CONFIG.importAliases.date);
+  const typeCol=detectColumn(headers,CONFIG.importAliases.type);
 
   if(!poCol || !vendorCol || !amountCol){
-    throw new Error("Required columns were not detected after finding the header row. Need PO No, Vendor Name and Eligible Payment/Amount. Found headers: "+headers.join(", "));
+    throw new Error(
+      "Required columns were not detected after finding the header row. " +
+      "Need PO No, Vendor Name and Eligible Payment/Amount. Found headers: " +
+      headers.join(", ")
+    );
   }
 
-  return rows
-    .filter(r=>String(r[poCol]??"").trim()!=="")
-    .map((r,i)=>({
+  // Your source workbook uses merged Project Code cells. In XLSX data,
+  // only the first row of a merged block contains the value; the rows below
+  // are blank. Carry the last nonblank Project Code downward so each PO row
+  // receives its correct project.
+  let lastProject="";
+
+  const result=[];
+  rows.forEach((r,i)=>{
+    const po=String(r[poCol]??"").trim();
+    if(!po) return; // also skips subtotal / blank rows
+
+    if(projectCol){
+      const thisProject=String(r[projectCol]??"").trim();
+      if(thisProject!=="") lastProject=thisProject;
+    }
+
+    result.push({
       rowNo:i+1,
-      project:projectCol?r[projectCol]:"",
+      project:projectCol ? (String(r[projectCol]??"").trim() || lastProject) : "",
       po:r[poCol],
       vendor:r[vendorCol],
       amount:cleanAmount(r[amountCol]),
       paymentDate:dateCol?r[dateCol]:"",
       paymentType:typeCol?r[typeCol]:"",
       source:r
-    }));
+    });
+  });
+
+  return result;
 }
 
 async function processCurrentFile(){
@@ -893,10 +1001,19 @@ async function processCurrentFile(){
     document.getElementById("processBtn").disabled=true;
     setProgress(12,"Reading Excel / CSV...",true);
     const sheets=await readWorkbook(STATE.currentFile);
-    const table=findBestImportTable(sheets);
+
+    let table=null;
+    try{
+      table=findBestImportTable(sheets);
+    }catch(autoErr){
+      setProgress(25,"Auto-detection needs help. Choose the Excel columns manually...",true);
+      openMapping(sheets);
+      return;
+    }
+
     setProgress(
       35,
-      `Using sheet "${table.sheetName}", header row ${table.headerRow}. Detected ${table.objects.length} data row(s)...`,
+      `Using sheet "${table.sheetName}", header row ${table.headerRow}. Headers: ${table.headers.filter(h=>!String(h).startsWith("__EMPTY")).join(" | ")}. Detected ${table.objects.length} data row(s)...`,
       true
     );
     STATE.importedRows=parseImportedRows(table.objects);
@@ -913,6 +1030,118 @@ async function processCurrentFile(){
   }finally{
     document.getElementById("processBtn").disabled=false;
   }
+}
+
+
+/* ========================= MANUAL COLUMN MAPPING =========================== */
+function openMapping(sheets){
+  STATE.pendingSheets=sheets;
+
+  // Pick the sheet with the most nonempty rows and find its best-looking header row.
+  let bestSheet=null,bestRowIndex=0,bestCount=-1,bestSignal=-1;
+
+  for(const sheet of sheets){
+    const rows=sheet.rows||[];
+    for(let i=0;i<Math.min(rows.length,100);i++){
+      const nonempty=(rows[i]||[]).filter(v=>String(v??"").trim()!=="").length;
+      const signal=headerSignal(rows[i]);
+      if(signal>bestSignal || (signal===bestSignal && nonempty>bestCount)){
+        bestSignal=signal;bestCount=nonempty;bestSheet=sheet;bestRowIndex=i;
+      }
+    }
+  }
+
+  if(!bestSheet) throw new Error("No readable worksheet was found.");
+
+  const headers=makeUniqueHeaders(bestSheet.rows[bestRowIndex]||[]);
+  const objects=[];
+  for(let r=bestRowIndex+1;r<bestSheet.rows.length;r++){
+    const arr=bestSheet.rows[r]||[];
+    if(!arr.some(v=>String(v??"").trim()!=="")) continue;
+    const obj={};
+    headers.forEach((h,c)=>obj[h]=arr[c]===undefined?"":arr[c]);
+    objects.push(obj);
+  }
+
+  STATE.pendingManualTable={
+    sheetName:bestSheet.name,
+    headerRow:bestRowIndex+1,
+    headers,
+    objects
+  };
+
+  const visibleHeaders=headers.filter(h=>!String(h).startsWith("__EMPTY"));
+  const opts=['<option value="">-- Not mapped --</option>']
+    .concat(visibleHeaders.map(h=>`<option value="${htmlEscape(h)}">${htmlEscape(h)}</option>`))
+    .join("");
+
+  ["mapPO","mapVendor","mapAmount","mapProject","mapDate","mapType"].forEach(id=>{
+    document.getElementById(id).innerHTML=opts;
+  });
+
+  // Try to preselect anything we can recognize.
+  document.getElementById("mapPO").value=detectColumn(headers,CONFIG.importAliases.po)||"";
+  document.getElementById("mapVendor").value=detectColumn(headers,CONFIG.importAliases.vendor)||"";
+  document.getElementById("mapAmount").value=detectColumn(headers,CONFIG.importAliases.amount)||"";
+  document.getElementById("mapProject").value=detectColumn(headers,CONFIG.importAliases.project)||"";
+  document.getElementById("mapDate").value=detectColumn(headers,CONFIG.importAliases.date)||"";
+  document.getElementById("mapType").value=detectColumn(headers,CONFIG.importAliases.type)||"";
+
+  document.getElementById("mappingSheetInfo").textContent=
+    `Sheet: ${bestSheet.name} · header row candidate: ${bestRowIndex+1}`;
+
+  document.getElementById("mappingModal").classList.remove("hidden");
+}
+
+function closeMapping(){
+  document.getElementById("mappingModal").classList.add("hidden");
+}
+
+function applyManualMapping(){
+  const t=STATE.pendingManualTable;
+  if(!t) return;
+
+  const poCol=document.getElementById("mapPO").value;
+  const vendorCol=document.getElementById("mapVendor").value;
+  const amountCol=document.getElementById("mapAmount").value;
+  const projectCol=document.getElementById("mapProject").value;
+  const dateCol=document.getElementById("mapDate").value;
+  const typeCol=document.getElementById("mapType").value;
+
+  if(!poCol || !vendorCol || !amountCol){
+    toast("PO Number, Vendor Name and Amount are required mappings.","error");
+    return;
+  }
+
+  let lastProject="";
+  STATE.importedRows=t.objects
+    .filter(r=>String(r[poCol]??"").trim()!=="")
+    .map((r,i)=>{
+      if(projectCol){
+        const p=String(r[projectCol]??"").trim();
+        if(p) lastProject=p;
+      }
+      return {
+        rowNo:i+1,
+        project:projectCol?(String(r[projectCol]??"").trim()||lastProject):"",
+        po:r[poCol],
+        vendor:r[vendorCol],
+        amount:cleanAmount(r[amountCol]),
+        paymentDate:dateCol?r[dateCol]:"",
+        paymentType:typeCol?r[typeCol]:"",
+        source:r
+      };
+    });
+
+  closeMapping();
+  if(!STATE.importedRows.length){
+    toast("No data rows were found using that mapping.","error");
+    return;
+  }
+
+  setProgress(58,"Comparing manually mapped rows with Payment Requisition records...",true);
+  buildMatches();
+  setProgress(100,"Reconciliation preview ready. Nothing has been updated yet.",true);
 }
 
 /* ========================== MATCHING ENGINE ================================ */
