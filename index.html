@@ -232,7 +232,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
     <div class="title-wrap">
       <div class="logo">PR</div>
       <div>
-        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v10</span></h1>
+        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v11</span></h1>
         <div class="subtitle">
           Upload an Excel/CSV payment list, compare each row with live Payment Requisition records,
           review exact and suggested matches, choose an alternate candidate when needed, and update
@@ -740,39 +740,104 @@ function assertCreator(){
 async function getRecords(reportName, opts){
   assertCreator();
   opts=opts||{};
+
   const cfg={
     app_name:CONFIG.appName,
     report_name:reportName,
     max_records:1000,
     field_config:"all"
   };
+
   if(opts.criteria) cfg.criteria=opts.criteria;
   if(opts.record_cursor) cfg.record_cursor=opts.record_cursor;
 
   const res=await ZOHO.CREATOR.DATA.getRecords(cfg);
-  if(res && res.code && res.code!==3000) throw new Error(res.message || JSON.stringify(res));
+
+  if(res && res.code && res.code!==3000){
+    const creatorErrors=Array.isArray(res.error)?res.error.join(" | "):"";
+    throw new Error(creatorErrors || res.message || JSON.stringify(res));
+  }
+
   return res || {data:[]};
 }
 
+function extractRecordCursor(res){
+  if(!res) return "";
+
+  const direct =
+    res.record_cursor ||
+    res.recordCursor ||
+    res.next_record_cursor ||
+    res.nextRecordCursor ||
+    res.info?.record_cursor ||
+    res.info?.recordCursor ||
+    res.meta?.record_cursor ||
+    res.meta?.recordCursor ||
+    res.header?.record_cursor ||
+    res.headers?.record_cursor ||
+    res.response?.record_cursor ||
+    res.response?.headers?.record_cursor;
+
+  if(direct) return String(direct);
+
+  try{
+    if(res.headers && typeof res.headers.get==="function"){
+      const h=res.headers.get("record_cursor") || res.headers.get("record-cursor");
+      if(h) return String(h);
+    }
+  }catch(_e){}
+
+  return "";
+}
+
+async function getAllRecords(reportName, progressLabel){
+  const all=[];
+  const seenCursors=new Set();
+  let cursor="";
+
+  while(true){
+    setConnection(
+      true,
+      `${progressLabel || reportName}: ${all.length.toLocaleString("en-IN")} loaded...`
+    );
+
+    const res=await getRecords(reportName,{
+      record_cursor:cursor || undefined
+    });
+
+    const batch=Array.isArray(res.data)?res.data:[];
+    all.push(...batch);
+
+    const nextCursor=extractRecordCursor(res);
+
+    if(!nextCursor) break;
+
+    if(seenCursors.has(nextCursor)){
+      throw new Error(
+        `Creator returned a repeated record cursor while loading ${reportName}. ` +
+        `Loaded ${all.length} records before stopping to prevent an infinite loop.`
+      );
+    }
+
+    seenCursors.add(nextCursor);
+    cursor=nextCursor;
+
+    await new Promise(resolve=>setTimeout(resolve,25));
+  }
+
+  return all;
+}
+
 async function fetchCoreCreatorData(){
-  assertCreator();
+  STATE.paymentRequisitions=await getAllRecords(
+    CONFIG.paymentRequisitionReport,
+    "Loading all Payment Requisitions"
+  );
 
-  // One request each; 1000 is the maximum per JS API v2 request.
-  // The widget warns if 1000 records are returned because there may be more.
-  const [prRes,pdRes]=await Promise.all([
-    getRecords(CONFIG.paymentRequisitionReport),
-    getRecords(CONFIG.paymentDetailsReport)
-  ]);
-
-  STATE.paymentRequisitions=(prRes.data||[]);
-  STATE.paymentDetails=(pdRes.data||[]);
-
-  if(STATE.paymentRequisitions.length===1000){
-    toast("Payment Requisition returned 1000 records. If your report contains more, tighten the report/filter or extend pagination before production use.","error");
-  }
-  if(STATE.paymentDetails.length===1000){
-    toast("Payment_detals2 returned 1000 records. If your report contains more, tighten the report/filter or extend pagination before production use.","error");
-  }
+  STATE.paymentDetails=await getAllRecords(
+    CONFIG.paymentDetailsReport,
+    "Loading all Payment Details"
+  );
 }
 
 async function refreshCreatorData(){
@@ -781,7 +846,10 @@ async function refreshCreatorData(){
     await fetchCoreCreatorData();
     STATE.creatorReady=true;
     STATE.creatorError=null;
-    setConnection(true,`Creator Live · ${STATE.paymentRequisitions.length} requisitions · ${STATE.paymentDetails.length} payment details`);
+    setConnection(
+      true,
+      `Creator Live · ${STATE.paymentRequisitions.length.toLocaleString("en-IN")} requisitions · ${STATE.paymentDetails.length.toLocaleString("en-IN")} payment details · all loaded`
+    );
     toast("Creator data refreshed.","success");
     if(STATE.importedRows.length) buildMatches();
   }catch(err){
