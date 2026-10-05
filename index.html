@@ -270,6 +270,42 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
 .suggest-meta{font-size:11px;color:var(--muted);line-height:1.45;margin-top:2px}
 .suggest-money{font-size:12px;font-weight:900;text-align:right}
 .suggest-score{font-size:13px;font-weight:900;color:var(--brand);text-align:center}
+
+
+/* Build v13 - spacious Tally review cards + full Payment Details preview */
+.tally-card-list{padding:18px;display:flex;flex-direction:column;gap:16px;background:#f7f8fb}
+.tally-payment-card{background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 8px 22px rgba(24,32,51,.05)}
+.tally-payment-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;background:linear-gradient(135deg,#fff 0%,#fffafd 100%)}
+.tally-payment-title{font-size:15px;font-weight:900;line-height:1.35}
+.tally-payment-sub{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.5}
+.tally-payment-badges{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.tally-score-badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:var(--brandSoft);color:var(--brand);font-size:11px;font-weight:900}
+.tally-payment-body{padding:18px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.tally-panel{border:1px solid var(--border);border-radius:14px;padding:14px;background:#fff}
+.tally-panel.selected-panel{background:#fffafd;border-color:#edd0df}
+.tally-panel-title{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:11px}
+.tally-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+.tally-field .k{font-size:10.5px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.035em}
+.tally-field .v{font-size:13px;font-weight:800;margin-top:3px;line-height:1.4;word-break:break-word}
+.tally-field .v.big{font-size:16px}
+.tally-payment-foot{padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#fafbfc}
+.tally-payment-foot-note{font-size:11.5px;color:var(--muted);line-height:1.5}
+.tally-payment-foot-actions{display:flex;gap:8px;flex-wrap:wrap}
+.preview-modal{width:min(1240px,97vw);max-height:92vh}
+.preview-intro{padding:12px 14px;border:1px solid #e8d1dd;background:#fff8fc;border-radius:12px;font-size:12px;line-height:1.6;color:#475467;margin-bottom:16px}
+.preview-section{border:1px solid var(--border);border-radius:15px;background:#fff;margin-bottom:14px;overflow:hidden}
+.preview-section-head{padding:12px 15px;background:#fafbfc;border-bottom:1px solid var(--border);font-size:13px;font-weight:900}
+.preview-grid{padding:14px 15px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 18px}
+.preview-field{min-width:0}
+.preview-field .k{font-size:10.5px;font-weight:850;color:var(--muted);text-transform:uppercase;letter-spacing:.035em}
+.preview-field .v{font-size:13px;font-weight:750;color:var(--ink);margin-top:4px;line-height:1.45;word-break:break-word;min-height:20px}
+.preview-field .v.money-value{font-size:14px;font-weight:900}
+.preview-field .source{font-size:10px;color:#98a2b3;margin-top:2px}
+.preview-warning{padding:11px 13px;border-radius:11px;background:var(--amberSoft);border:1px solid #f0dbad;color:#7a4b08;font-size:11.5px;line-height:1.55;margin:12px 0}
+.preview-ok{padding:11px 13px;border-radius:11px;background:var(--greenSoft);border:1px solid #c7ead8;color:#116c46;font-size:11.5px;line-height:1.55;margin:12px 0}
+.preview-actions{display:flex;gap:9px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+@media(max-width:1050px){.tally-payment-body{grid-template-columns:1fr}.preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.tally-fields,.preview-grid{grid-template-columns:1fr}.tally-card-list{padding:10px}.tally-payment-body{padding:12px}.tally-payment-head,.tally-payment-foot{padding:12px}}
 @media(max-width:900px){.tally-stats{grid-template-columns:repeat(2,1fr)}.suggest-context{grid-template-columns:repeat(2,1fr)}.suggest-item{grid-template-columns:38px minmax(0,1fr) 90px}}
 
 </style>
@@ -281,7 +317,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
     <div class="title-wrap">
       <div class="logo">PR</div>
       <div>
-        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v12</span></h1>
+        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v13</span></h1>
         <div class="subtitle">
           Upload an Excel/CSV payment list, compare each row with live Payment Requisition records,
           review exact and suggested matches, choose an alternate candidate when needed, and update
@@ -435,29 +471,8 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
       <div class="tally-stat"><div class="l">Need Review</div><div id="tallyStatReview" class="n">0</div></div>
     </div>
 
-    <div class="table-wrap" style="max-height:650px">
-      <table style="min-width:1550px">
-        <thead>
-          <tr>
-            <th>Company / Voucher</th>
-            <th>Date</th>
-            <th>PO No</th>
-            <th>Project</th>
-            <th>Tally Vendor</th>
-            <th>Tally Amount</th>
-            <th>UTR / Transaction</th>
-            <th>Status</th>
-            <th>Score</th>
-            <th>System Amount</th>
-            <th>Difference</th>
-            <th>Selected Payment Requisition</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="tallyResultBody"></tbody>
-      </table>
-      <div id="tallyEmpty" class="empty hidden"><strong>No open Tally payments found.</strong>Accepted records are removed from this open queue. Older Rejected records, if any, also remain excluded.</div>
-    </div>
+    <div id="tallyResultBody" class="tally-card-list"></div>
+    <div id="tallyEmpty" class="empty hidden"><strong>No open Tally payments found.</strong>Accepted records are removed from this open queue. Older Rejected records, if any, also remain excluded.</div>
   </section>
 </div>
 
@@ -542,6 +557,25 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
       </div>
       <div class="section-sub">Select the correct Payment Requisition. The selected PR will be saved back to Match_Invoce_Report when you click Accept.</div>
       <div id="tallySuggestList" class="suggest-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="tallyReviewModal" class="modal-backdrop hidden">
+  <div class="modal preview-modal">
+    <div class="modal-head">
+      <div>
+        <strong>Payment Details Preview</strong>
+        <div class="cell-sub" style="margin-top:3px">Review the complete payment record before acceptance. Values are fetched from the selected Payment Requisition plus the Tally reconciliation record.</div>
+      </div>
+      <button class="btn small" onclick="closeTallyReview()">Close</button>
+    </div>
+    <div id="tallyReviewBody" class="modal-body"></div>
+    <div class="modal-head" style="border-top:1px solid var(--border);border-bottom:0;justify-content:flex-end">
+      <div class="preview-actions">
+        <button class="btn" onclick="closeTallyReview()">Back</button>
+        <button id="tallyReviewAcceptBtn" class="btn primary" onclick="acceptTallyFromReview()">Accept Payment</button>
+      </div>
     </div>
   </div>
 </div>
@@ -697,6 +731,7 @@ const STATE = {
   tallyRows: [],
   tallyBusy: false,
   tallySuggestRowId: null,
+  tallyReviewRowId: null,
   reconciliationMode: "file"
 };
 
@@ -2617,35 +2652,366 @@ function renderTallyTable(){
     const selectedSystem=c?Number(c.amount||0):cleanAmount(d.System_Amount);
     const selectedDiff=c?Math.abs(imported-selectedSystem):cleanAmount(d.Amount_Difference || Math.abs(imported-selectedSystem));
     const selectedScore=c?Number(c.score||0):Number(cleanAmount(d.Match_Score)||0);
+    const primaryRef=valueText(d.UTR_No_Import)||valueText(d.Transaction_ID_Import)||valueText(d.Cheque_No_Import)||"—";
 
-    const selectedHtml=c ? `
-      <div class="tally-selected-card">
-        <div class="po">${htmlEscape(c.po||"PR "+c.id)}</div>
-        <div class="meta">${htmlEscape(c.project||"—")} · ${htmlEscape(c.vendor||"—")}</div>
-        <div class="meta">Eligible ${money(c.amount)} · Score ${Math.round(c.score)}%</div>
-        <span class="tag">${htmlEscape(c.source||"Selected")}</span>
-      </div>` : '<span class="tally-lock">No Payment Requisition selected</span>';
+    const selectedBlock=c ? `
+      <div class="tally-fields">
+        <div class="tally-field"><div class="k">Creator PO</div><div class="v">${htmlEscape(c.po||"—")}</div></div>
+        <div class="tally-field"><div class="k">Project</div><div class="v">${htmlEscape(c.project||"—")}</div></div>
+        <div class="tally-field" style="grid-column:1/-1"><div class="k">Vendor</div><div class="v">${htmlEscape(c.vendor||"—")}</div></div>
+        <div class="tally-field"><div class="k">Eligible Payment</div><div class="v big">${money(c.amount)}</div></div>
+        <div class="tally-field"><div class="k">Difference</div><div class="v big">${money(selectedDiff)}</div></div>
+      </div>` : `
+      <div class="preview-warning" style="margin:0">No Payment Requisition is selected. Use <b>Suggest / Change PO</b> before accepting this payment.</div>`;
 
-    const tr=document.createElement("tr");
-    tr.className="data-row"+(r.busy?" tally-row-busy":"");
-    tr.innerHTML=`
-      <td><div class="cell-main">${htmlEscape(valueText(d.Tally_Company)||"—")}</div><div class="cell-sub">Voucher: ${htmlEscape(valueText(d.Tally_Voucher_Number)||"—")}</div></td>
-      <td><div class="cell-main">${htmlEscape(valueText(d.Payment_Record_Date_Import)||"—")}</div><div class="cell-sub">${htmlEscape(valueText(d.Tally_Voucher_Type)||"")}</div></td>
-      <td><div class="cell-main">${htmlEscape(valueText(d.PO_Number)||"—")}</div><div class="cell-sub">Creator: ${htmlEscape(c?.po||valueText(d.System_PO_Number)||"—")}</div></td>
-      <td><div class="cell-main">${htmlEscape(valueText(d.Project_Code_Import)||"—")}</div><div class="cell-sub">Creator: ${htmlEscape(c?.project||valueText(d.System_Project_Code)||"—")}</div></td>
-      <td><div class="cell-main">${htmlEscape(valueText(d.Vendor_Name_Import)||"—")}</div><div class="cell-sub">Creator: ${htmlEscape(c?.vendor||valueText(d.System_Vendor_Name)||"—")}</div></td>
-      <td class="money">${money(imported)}</td>
-      <td><div class="cell-main">${htmlEscape(valueText(d.UTR_No_Import)||valueText(d.Transaction_ID_Import)||valueText(d.Cheque_No_Import)||"—")}</div><div class="cell-sub">${htmlEscape(valueText(d.Payment_Type_Import)||"")}</div></td>
-      <td><span class="status ${tallyStatusClass(status)}">${htmlEscape(status)}</span></td>
-      <td class="score">${Math.round(selectedScore)}</td>
-      <td class="money">${money(selectedSystem)}</td>
-      <td class="money">${money(selectedDiff)}</td>
-      <td>${selectedHtml}</td>
-      <td><div class="tally-actions">
-        <button class="btn small" ${r.busy?"disabled":""} onclick="openTallySuggestions('${htmlEscape(r.id)}')">Suggest</button>
-        <button class="btn primary small" ${!r.selectedPRID||r.busy?"disabled":""} onclick="tallyAccept('${htmlEscape(r.id)}')">Accept</button>
-      </div></td>`;
-    body.appendChild(tr);
+    const card=document.createElement("div");
+    card.className="tally-payment-card"+(r.busy?" tally-row-busy":"");
+    card.innerHTML=`
+      <div class="tally-payment-head">
+        <div>
+          <div class="tally-payment-title">${htmlEscape(valueText(d.PO_Number)||"No PO from Tally")}</div>
+          <div class="tally-payment-sub">${htmlEscape(valueText(d.Tally_Company)||"—")} · Voucher ${htmlEscape(valueText(d.Tally_Voucher_Number)||"—")} · ${htmlEscape(valueText(d.Payment_Record_Date_Import)||"—")}</div>
+        </div>
+        <div class="tally-payment-badges">
+          <span class="status ${tallyStatusClass(status)}">${htmlEscape(status)}</span>
+          <span class="tally-score-badge">Score ${Math.round(selectedScore)}%</span>
+        </div>
+      </div>
+      <div class="tally-payment-body">
+        <div class="tally-panel">
+          <div class="tally-panel-title">Tally / Reconciliation Payment</div>
+          <div class="tally-fields">
+            <div class="tally-field"><div class="k">Project</div><div class="v">${htmlEscape(valueText(d.Project_Code_Import)||"—")}</div></div>
+            <div class="tally-field"><div class="k">Amount Paid</div><div class="v big">${money(imported)}</div></div>
+            <div class="tally-field" style="grid-column:1/-1"><div class="k">Vendor</div><div class="v">${htmlEscape(valueText(d.Vendor_Name_Import)||"—")}</div></div>
+            <div class="tally-field"><div class="k">UTR / Transaction</div><div class="v">${htmlEscape(primaryRef)}</div></div>
+            <div class="tally-field"><div class="k">Payment Type</div><div class="v">${htmlEscape(valueText(d.Payment_Type_Import)||"—")}</div></div>
+          </div>
+        </div>
+        <div class="tally-panel selected-panel">
+          <div class="tally-panel-title">Selected Payment Requisition</div>
+          ${selectedBlock}
+        </div>
+      </div>
+      <div class="tally-payment-foot">
+        <div class="tally-payment-foot-note">On Accept, the selected match is saved to <b>Match_Invoce_Report</b>, the backend creates <b>Payment_detals2</b>, and this widget then fills the additional available Payment Details fields from the selected requisition and reconciliation record.</div>
+        <div class="tally-payment-foot-actions">
+          <button class="btn" ${r.busy?"disabled":""} onclick="openTallySuggestions('${htmlEscape(r.id)}')">Suggest / Change PO</button>
+          <button class="btn primary" ${!r.selectedPRID||r.busy?"disabled":""} onclick="openTallyReview('${htmlEscape(r.id)}')">Review & Accept</button>
+        </div>
+      </div>`;
+    body.appendChild(card);
+  }
+}
+
+
+function tallyFirstValue(record,aliases){
+  for(const key of (aliases||[])){
+    if(record && record[key] !== undefined && record[key] !== null && String(valueText(record[key])).trim() !== "") return record[key];
+  }
+  return null;
+}
+
+function tallyFirstText(record,aliases){
+  return valueText(tallyFirstValue(record,aliases));
+}
+
+function tallySelectedPRRaw(r){
+  if(!r || !r.selectedPRID) return null;
+  return STATE.paymentRequisitions.find(x=>String(x.ID)===String(r.selectedPRID)) || null;
+}
+
+function tallyAlreadyPaidForPR(prId){
+  return round2(STATE.paymentDetails.reduce((sum,rec)=>{
+    const d=pdView(rec);
+    return String(d.paymentRequisitionId)===String(prId) ? sum + Number(d.paymentDone||0) : sum;
+  },0));
+}
+
+function previewValue(label,value,source,asMoney){
+  const shown=(value===null || value===undefined || String(valueText(value)).trim()==="") ? "—" : (asMoney?money(cleanAmount(value)):valueText(value));
+  return `<div class="preview-field"><div class="k">${htmlEscape(label)}</div><div class="v ${asMoney?"money-value":""}">${htmlEscape(shown)}</div>${source?`<div class="source">${htmlEscape(source)}</div>`:""}</div>`;
+}
+
+function tallyBuildPreview(r){
+  const d=r.raw;
+  const c=tallySelectedCandidate(r);
+  const pr=tallySelectedPRRaw(r) || {};
+  const imported=cleanAmount(d.Imported_Amount);
+  const eligible=Number(c?.amount || cleanAmount(d.System_Amount) || 0);
+  const alreadyPaid=tallyAlreadyPaidForPR(r.selectedPRID);
+  let remainingBefore=round2(eligible-alreadyPaid);
+  let remainingAfter=round2(remainingBefore-imported);
+  if(Math.abs(remainingAfter)<=CONFIG.exactAmountTolerance) remainingAfter=0;
+
+  const general=[
+    ["PO No",c?.po||valueText(d.System_PO_Number)||valueText(d.PO_Number),"Selected Payment Requisition",false],
+    ["Vendor Name",c?.vendor||valueText(d.System_Vendor_Name)||valueText(d.Vendor_Name_Import),"Selected Payment Requisition",false],
+    ["Payment Record Date",tallyFirstValue(d,["Payment_Record_Date_Import"]),"Tally / Reconciliation",false],
+    ["Payment Request Date",tallyFirstValue(pr,["Payment_Request_Date"])||tallyFirstValue(d,["Payment_Request_Date_Import"]),"Payment Requisition",false],
+    ["Payment Type",tallyFirstValue(pr,["Payment_Type"])||tallyFirstValue(d,["Payment_Type_Import"]),"Payment Requisition",false],
+    ["Ref No",tallyFirstValue(pr,["Ref_No","Reference_No","Reference_Number"]),"Payment Requisition",false],
+    ["Approved Amount",tallyFirstValue(pr,["Approved_Amount","Total","Payable_Amount"]),"Payment Requisition",true],
+    ["Approved Amount($)",tallyFirstValue(pr,["Approved_Amount_USD","Approved_Amount_Dollar","Total_USD"]),"Payment Requisition",false],
+    ["Currency Name",tallyFirstValue(pr,["Currency_Name","Currency","Currency_Type"]),"Payment Requisition",false],
+    ["Payment Request Status",tallyFirstValue(pr,["Payment_Request_Status","Request_Status","Status"]),"Payment Requisition",false],
+    ["Payment Record Status",tallyFirstValue(pr,["Payment_Record_Status","Record_Status"]),"Payment Requisition",false],
+    ["Payment Details",tallyFirstValue(pr,["Payment_Details","Payment_Detail"]),"Payment Requisition",false],
+    ["Imported Amount",imported,"Tally / Reconciliation",true],
+    ["Amount Difference",Math.abs(imported-eligible),"Calculated match",true],
+    ["Difference Percentage",amountDiffPct(imported,eligible).toFixed(3)+"%","Calculated match",false],
+    ["Match Score",String(Math.round(Number(c?.score||d.Match_Score||0)))+" / 100","Selected match",false],
+    ["Reconciled On",dateTimeForCreator(),"System",false],
+    ["Payment Requisition",`${c?.po||"PR"} · ID ${r.selectedPRID||"—"}`,"Selected Payment Requisition",false]
+  ];
+
+  const calc=[
+    ["Request Basic Amount",tallyFirstValue(pr,["Basic","Request_Basic_Amount","Subtotal","Sub_Total"]),"Payment Requisition",true],
+    ["Percentage",tallyFirstValue(pr,["Percentage","Payment_Percentage","Payment"]),"Payment Requisition",false],
+    ["Running IGST",tallyFirstValue(pr,["Running_IGST","IGST"]),"Payment Requisition",true],
+    ["Running CGST",tallyFirstValue(pr,["Running_CGST","CGST"]),"Payment Requisition",true],
+    ["Running SGST",tallyFirstValue(pr,["Running_SGST","SGST"]),"Payment Requisition",true],
+    ["Running Total",tallyFirstValue(pr,["Running_Total"]),"Payment Requisition",true],
+    ["Deduction from Advance",tallyFirstValue(pr,["Deduction_from_Advance","Deduction_From_Advance"]),"Payment Requisition",true],
+    ["Deduction From Retention",tallyFirstValue(pr,["Deduction_From_Retention","Deduction_from_Retention"]),"Payment Requisition",true],
+    ["Total Deduction",tallyFirstValue(pr,["Total_Deduction"]),"Payment Requisition",true],
+    ["Eligible Payable Amount",eligible,"Selected Payment Requisition",true],
+    ["Already Paid",alreadyPaid,"Existing Payment_detals2",true],
+    ["Remaining Before This Payment",remainingBefore,"Calculated from accepted Payment_detals2",true],
+    ["Payment Done",imported,"Tally / Reconciliation",true],
+    ["Remaining Amount",remainingAfter,"Backend payment balance preview",true],
+    ["Remaining Against PO",tallyFirstValue(pr,["Remaning_Against_PO","Remaining_Against_PO"]),"Payment Requisition",true],
+    ["Running PO",tallyFirstValue(pr,["Running_PO"]),"Payment Requisition",true],
+    ["Previous Remaining From Request",tallyFirstValue(pr,["Previous_Remaining_From_Request"]),"Payment Requisition",true],
+    ["Last Payment",remainingAfter===0?"Yes":"No","Calculated",false]
+  ];
+
+  const usd=[
+    ["Request Basic Amount($)",tallyFirstValue(pr,["Request_Basic_Amount_USD","Request_Basic_Amount_Dollar","Basic_USD"]),"Payment Requisition",false],
+    ["Running IGST($)",tallyFirstValue(pr,["Running_IGST_USD","Running_IGST_Dollar"]),"Payment Requisition",false],
+    ["Running Total($)",tallyFirstValue(pr,["Running_Total_USD","Running_Total_Dollar"]),"Payment Requisition",false],
+    ["Deduction from Advance($)",tallyFirstValue(pr,["Deduction_from_Advance_USD","Deduction_from_Advance_Dollar"]),"Payment Requisition",false],
+    ["Deduction From Retention($)",tallyFirstValue(pr,["Deduction_From_Retention_USD","Deduction_From_Retention_Dollar"]),"Payment Requisition",false],
+    ["Total Deduction($)",tallyFirstValue(pr,["Total_Deduction_USD","Total_Deduction_Dollar"]),"Payment Requisition",false],
+    ["Eligible Payable Amount($)",tallyFirstValue(pr,["Eligible_Payment_USD","Eligible_Payable_Amount_USD","Eligible_Payable_Amount_Dollar"]),"Payment Requisition",false],
+    ["Payment Done($)",tallyFirstValue(d,["Imported_Amount_USD","Payment_Done_USD"]),"Reconciliation when available",false],
+    ["Remaining Amount($)",tallyFirstValue(pr,["Remaining_Amount_USD","Remaining_Amount_Dollar"]),"Payment Requisition",false],
+    ["Remaining Against PO($)",tallyFirstValue(pr,["Remaning_Against_PO_USD","Remaining_Against_PO_USD"]),"Payment Requisition",false],
+    ["Running PO($)",tallyFirstValue(pr,["Running_PO_USD","Running_PO_Dollar"]),"Payment Requisition",false],
+    ["Previous Remaining From Request($)",tallyFirstValue(pr,["Previous_Remaining_From_Request_USD","Previous_Remaining_From_Request_Dollar"]),"Payment Requisition",false]
+  ];
+
+  const method=[
+    ["Bank Name",tallyFirstValue(d,["Bank_Name_Import"]),"Tally / Reconciliation",false],
+    ["Paid Through",tallyFirstValue(d,["Paid_Through_Import"]),"Tally / Reconciliation",false],
+    ["Account Number",tallyFirstValue(d,["Account_Number_Import","Account_Number"]),"Tally / Reconciliation when available",false],
+    ["UTR No",tallyFirstValue(d,["UTR_No_Import"]),"Tally / Reconciliation",false],
+    ["Transaction ID",tallyFirstValue(d,["Transaction_ID_Import"]),"Tally / Reconciliation",false],
+    ["Cheque No",tallyFirstValue(d,["Cheque_No_Import"]),"Tally / Reconciliation",false],
+    ["Remark / Note",tallyFirstValue(d,["Payment_Remark_Import","Remarks"]),"Tally / Reconciliation",false],
+    ["Attachment","—","No attachment source in reconciliation",false]
+  ];
+
+  return {general,calc,usd,method,remainingAfter,eligible,imported,alreadyPaid,pr,c};
+}
+
+function renderPreviewSection(title,fields){
+  return `<section class="preview-section"><div class="preview-section-head">${htmlEscape(title)}</div><div class="preview-grid">${fields.map(x=>previewValue(...x)).join("")}</div></section>`;
+}
+
+function openTallyReview(recordId){
+  const r=STATE.tallyRows.find(x=>x.id===String(recordId));
+  if(!r){toast("Tally reconciliation row was not found.","error");return}
+  if(!r.selectedPRID){toast("Use Suggest / Change PO and select a Payment Requisition first.","error");return}
+  STATE.tallyReviewRowId=String(recordId);
+  const p=tallyBuildPreview(r);
+  const warning=p.remainingAfter < -CONFIG.exactAmountTolerance
+    ? `<div class="preview-warning"><b>Overpayment warning:</b> this payment is greater than the calculated remaining amount by ${money(Math.abs(p.remainingAfter))}. The backend will still apply its own overpayment protection and can reject the Accept action.</div>`
+    : `<div class="preview-ok"><b>Ready for review.</b> This preview uses the selected Payment Requisition plus the Tally reconciliation record. Blank fields mean that no source value was returned. The backend remains authoritative for final payment balance and locking.</div>`;
+
+  document.getElementById("tallyReviewBody").innerHTML=`
+    <div class="preview-intro"><b>${htmlEscape(p.c?.po||"Selected PR")}</b> · ${htmlEscape(p.c?.vendor||"—")} · Tally payment <b>${money(p.imported)}</b>. Review the sections below before accepting.</div>
+    ${warning}
+    ${renderPreviewSection("Payment Details",p.general)}
+    ${renderPreviewSection("Calculations (INR)",p.calc)}
+    ${renderPreviewSection("Calculations ($)",p.usd)}
+    ${renderPreviewSection("Payment Method",p.method)}
+    <div class="preview-warning"><b>Bank Name / Paid Through:</b> if these are lookup fields in Payment_detals2, Build v13 only updates them when the Tally text can be resolved to an existing Creator value. It does not force plain text into a lookup.</div>`;
+  document.getElementById("tallyReviewAcceptBtn").disabled=false;
+  document.getElementById("tallyReviewModal").classList.remove("hidden");
+}
+
+function closeTallyReview(){
+  document.getElementById("tallyReviewModal").classList.add("hidden");
+  STATE.tallyReviewRowId=null;
+}
+
+async function getFreshPaymentDetailById(id){
+  try{
+    if(ZOHO.CREATOR.DATA.getRecordById){
+      const res=await ZOHO.CREATOR.DATA.getRecordById({
+        app_name:CONFIG.appName,
+        report_name:CONFIG.paymentDetailsReport,
+        id:String(id)
+      });
+      if(res && res.data) return res.data;
+    }
+  }catch(err){
+    console.warn("Could not fetch newly created Payment_detals2 record.",err);
+  }
+  return STATE.paymentDetails.find(x=>String(x.ID)===String(id)) || null;
+}
+
+function addResolvedField(data,targetSample,targetAliases,value){
+  if(value===null || value===undefined || String(valueText(value)).trim()==="") return;
+  putIfTargetExists(data,targetSample,targetAliases,value);
+}
+
+function buildTallyPaymentDetailEnrichment(r,targetSample){
+  const p=tallyBuildPreview(r);
+  const pr=p.pr || {};
+  const d=r.raw || {};
+  const f=CONFIG.paymentDetailsFields;
+  const groups={general:{},calc:{},usd:{},method:{},audit:{}};
+
+  addResolvedField(groups.general,targetSample,["Payment_Record_Date","PaymentRecordDate"],tallyFirstValue(d,["Payment_Record_Date_Import"])||todayForCreator());
+  addResolvedField(groups.general,targetSample,["Payment_Request_Date","PaymentRequestDate"],tallyFirstValue(pr,["Payment_Request_Date"])||tallyFirstValue(d,["Payment_Request_Date_Import"]));
+  addResolvedField(groups.general,targetSample,["Payment_Type","PaymentType"],tallyFirstValue(pr,["Payment_Type"])||tallyFirstValue(d,["Payment_Type_Import"]));
+  addResolvedField(groups.general,targetSample,["Ref_No","Reference_No","Reference_Number"],tallyFirstValue(pr,["Ref_No","Reference_No","Reference_Number"]));
+  addResolvedField(groups.general,targetSample,["Payment_Request_Status","PaymentRequestStatus"],tallyFirstValue(pr,["Payment_Request_Status","Request_Status","Status"]));
+  addResolvedField(groups.general,targetSample,["Payment_Record_Status","PaymentRecordStatus"],tallyFirstValue(pr,["Payment_Record_Status","Record_Status"]));
+  addResolvedField(groups.general,targetSample,["Payment_Details","PaymentDetails","Payment_Detail"],tallyFirstValue(pr,["Payment_Details","Payment_Detail"]));
+  addResolvedField(groups.general,targetSample,["Currency_Name","Currency"],tallyFirstValue(pr,["Currency_Name","Currency","Currency_Type"]));
+  addResolvedField(groups.general,targetSample,["Approved_Amount","Total","Payable_Amount"],tallyFirstValue(pr,["Approved_Amount","Total","Payable_Amount"]));
+
+  addResolvedField(groups.calc,targetSample,["Request_Basic_Amount","Basic","Subtotal","Sub_Total"],tallyFirstValue(pr,["Basic","Request_Basic_Amount","Subtotal","Sub_Total"]));
+  addResolvedField(groups.calc,targetSample,["Percentage","Payment_Percentage","Payment"],tallyFirstValue(pr,["Percentage","Payment_Percentage","Payment"]));
+  [
+    [["Running_IGST"],["Running_IGST","IGST"]],
+    [["Running_CGST"],["Running_CGST","CGST"]],
+    [["Running_SGST"],["Running_SGST","SGST"]],
+    [["Running_Total"],["Running_Total"]],
+    [["Deduction_from_Advance","Deduction_From_Advance"],["Deduction_from_Advance","Deduction_From_Advance"]],
+    [["Deduction_From_Retention","Deduction_from_Retention"],["Deduction_From_Retention","Deduction_from_Retention"]],
+    [["Total_Deduction"],["Total_Deduction"]],
+    [["Remaning_Against_PO","Remaining_Against_PO"],["Remaning_Against_PO","Remaining_Against_PO"]],
+    [["Running_PO"],["Running_PO"]],
+    [["Previous_Remaining_From_Request"],["Previous_Remaining_From_Request"]]
+  ].forEach(([targets,sources])=>addResolvedField(groups.calc,targetSample,targets,tallyFirstValue(pr,sources)));
+  addResolvedField(groups.calc,targetSample,["Eligible_Payable_Amount","EligiblePayment"],p.eligible);
+  addResolvedField(groups.calc,targetSample,["Payment_Done","PaymentDone"],p.imported);
+
+  [
+    [["Approved_Amount_USD","Approved_Amount_Dollar"],["Approved_Amount_USD","Approved_Amount_Dollar","Total_USD"]],
+    [["Request_Basic_Amount_USD","Request_Basic_Amount_Dollar"],["Request_Basic_Amount_USD","Request_Basic_Amount_Dollar","Basic_USD"]],
+    [["Running_IGST_USD","Running_IGST_Dollar"],["Running_IGST_USD","Running_IGST_Dollar"]],
+    [["Running_Total_USD","Running_Total_Dollar"],["Running_Total_USD","Running_Total_Dollar"]],
+    [["Deduction_from_Advance_USD","Deduction_from_Advance_Dollar"],["Deduction_from_Advance_USD","Deduction_from_Advance_Dollar"]],
+    [["Deduction_From_Retention_USD","Deduction_From_Retention_Dollar"],["Deduction_From_Retention_USD","Deduction_From_Retention_Dollar"]],
+    [["Total_Deduction_USD","Total_Deduction_Dollar"],["Total_Deduction_USD","Total_Deduction_Dollar"]],
+    [["Eligible_Payable_Amount_USD","Eligible_Payable_Amount_Dollar"],["Eligible_Payment_USD","Eligible_Payable_Amount_USD","Eligible_Payable_Amount_Dollar"]],
+    [["Running_PO_USD","Running_PO_Dollar"],["Running_PO_USD","Running_PO_Dollar"]],
+    [["Previous_Remaining_From_Request_USD","Previous_Remaining_From_Request_Dollar"],["Previous_Remaining_From_Request_USD","Previous_Remaining_From_Request_Dollar"]],
+    [["Remaning_Against_PO_USD","Remaining_Against_PO_USD"],["Remaning_Against_PO_USD","Remaining_Against_PO_USD"]]
+  ].forEach(([targets,sources])=>addResolvedField(groups.usd,targetSample,targets,tallyFirstValue(pr,sources)));
+  addResolvedField(groups.usd,targetSample,["Payment_Done_USD","Payment_Done_Dollar"],tallyFirstValue(d,["Imported_Amount_USD","Payment_Done_USD"]));
+
+  const bankText=tallyFirstText(d,["Bank_Name_Import"]);
+  if(bankText){
+    const resolvedBank=resolveChoiceOrLookupValue(f.bankName,bankText);
+    if(resolvedBank!==null) addResolvedField(groups.method,targetSample,[f.bankName,"Bank_Name"],resolvedBank);
+  }
+  const paidThroughText=tallyFirstText(d,["Paid_Through_Import"]);
+  if(paidThroughText){
+    const resolved=resolveChoiceOrLookupValue(f.paidThrough,paidThroughText);
+    if(resolved!==null) addResolvedField(groups.method,targetSample,[f.paidThrough,"Paid_Through"],resolved);
+  }
+  addResolvedField(groups.method,targetSample,[f.accountNumber,"Account_Number"],tallyFirstValue(d,["Account_Number_Import","Account_Number"]));
+  addResolvedField(groups.method,targetSample,[f.utr,"UTR_No"],tallyFirstValue(d,["UTR_No_Import"]));
+  addResolvedField(groups.method,targetSample,[f.transactionId,"Transaction_ID"],tallyFirstValue(d,["Transaction_ID_Import"]));
+  addResolvedField(groups.method,targetSample,[f.chequeNo,"Cheque_No"],tallyFirstValue(d,["Cheque_No_Import"]));
+
+  const existingRemark=valueText(targetSample[f.remarkNote]||targetSample.Remark_Note||"");
+  const tallyRemark=tallyFirstText(d,["Payment_Remark_Import"]);
+  if(tallyRemark && !existingRemark.includes(tallyRemark)){
+    addResolvedField(groups.method,targetSample,[f.remarkNote,"Remark_Note"],[existingRemark,tallyRemark].filter(Boolean).join(" | "));
+  }
+
+  addResolvedField(groups.audit,targetSample,[f.importedAmount,"Imported_Amount"],p.imported);
+  addResolvedField(groups.audit,targetSample,[f.amountDifference,"Amount_Difference"],round2(Math.abs(p.imported-p.eligible)));
+  addResolvedField(groups.audit,targetSample,[f.differencePercentage,"Difference_Percentage"],round2(amountDiffPct(p.imported,p.eligible)));
+  addResolvedField(groups.audit,targetSample,[f.matchScore,"Match_Score"],Number(p.c?.score||0));
+  return groups;
+}
+
+async function updatePaymentDetailGroup(recordId,data){
+  const keys=Object.keys(data||{});
+  if(!keys.length) return {updated:0,failed:[]};
+  try{
+    const res=await ZOHO.CREATOR.DATA.updateRecordById({
+      app_name:CONFIG.appName,
+      report_name:CONFIG.paymentDetailsReport,
+      id:String(recordId),
+      payload:{data,skip_workflow:["form_workflow"]}
+    });
+    if(res && res.code && Number(res.code)!==3000) throw new Error(res.message||JSON.stringify(res));
+    return {updated:keys.length,failed:[]};
+  }catch(groupErr){
+    let updated=0;
+    const failed=[];
+    for(const key of keys){
+      try{
+        const res=await ZOHO.CREATOR.DATA.updateRecordById({
+          app_name:CONFIG.appName,
+          report_name:CONFIG.paymentDetailsReport,
+          id:String(recordId),
+          payload:{data:{[key]:data[key]},skip_workflow:["form_workflow"]}
+        });
+        if(res && res.code && Number(res.code)!==3000) throw new Error(res.message||JSON.stringify(res));
+        updated++;
+      }catch(err){
+        failed.push(`${key}: ${err.message||String(err)}`);
+      }
+    }
+    return {updated,failed};
+  }
+}
+
+async function enrichAcceptedPaymentDetail(r,paymentDetailId){
+  if(!paymentDetailId) return {updated:0,failed:["Payment Details ID was not returned by the backend."]};
+  const target=await getFreshPaymentDetailById(paymentDetailId);
+  if(!target) return {updated:0,failed:["New Payment_detals2 record could not be loaded for enrichment."]};
+  const groups=buildTallyPaymentDetailEnrichment(r,target);
+  let updated=0;
+  const failed=[];
+  for(const name of ["general","calc","usd","method","audit"]){
+    const result=await updatePaymentDetailGroup(paymentDetailId,groups[name]);
+    updated+=result.updated;
+    failed.push(...result.failed.map(x=>`${name}: ${x}`));
+  }
+  return {updated,failed};
+}
+
+function extractPaymentDetailId(response){
+  const direct=response?.data?.ID || response?.data?.id || response?.ID || response?.id;
+  if(direct && /^\d+$/.test(String(direct))) return String(direct);
+  const text=customApiMessage(response) + " " + (()=>{try{return JSON.stringify(response)}catch(_e){return ""}})();
+  const m=String(text).match(/Payment\s*Details\s*ID\s*:\s*(\d+)/i);
+  return m ? m[1] : "";
+}
+
+async function acceptTallyFromReview(){
+  const id=STATE.tallyReviewRowId;
+  if(!id) return;
+  const btn=document.getElementById("tallyReviewAcceptBtn");
+  if(btn) btn.disabled=true;
+  try{
+    await tallyAccept(id);
+    closeTallyReview();
+  }catch(err){
+    toast(err.message||String(err),"error");
+  }finally{
+    if(btn) btn.disabled=false;
   }
 }
 
@@ -2740,7 +3106,23 @@ async function invokeTallyAction(r,action){
     if(response && response.code && ![200,201,202,3000].includes(Number(response.code))){
       throw new Error(msg || `Custom API failed with code ${response.code}`);
     }
-    toast((msg && msg.includes("SUCCESS|")) ? msg.replace(/^SUCCESS\|/i,"") : "Payment accepted successfully.","success");
+    const successText=(msg && msg.includes("SUCCESS|")) ? msg.replace(/^SUCCESS\|/i,"") : "Payment accepted successfully.";
+    const newPaymentDetailId=extractPaymentDetailId(response);
+
+    // Backend remains authoritative for creation/locking. After creation, enrich the
+    // newly-created Payment_detals2 record with other available PR + reconciliation fields.
+    if(action==="ACCEPT" && newPaymentDetailId){
+      const enrichment=await enrichAcceptedPaymentDetail(r,newPaymentDetailId);
+      if(enrichment.failed.length){
+        console.warn("Payment detail enrichment skipped some fields:",enrichment.failed);
+        toast(`${successText} Additional fields updated: ${enrichment.updated}. Some fields were skipped; see console/Diagnostics.`,"success");
+      }else{
+        toast(`${successText} Additional Payment Details fields updated: ${enrichment.updated}.`,"success");
+      }
+    }else{
+      toast(successText,"success");
+    }
+
     await loadTallyPayments(false);
     // Refresh Payment Details count/cache because Accept creates a new Payment_detals2 record.
     try{await refreshCreatorData()}catch(_e){}
@@ -2753,30 +3135,9 @@ async function invokeTallyAction(r,action){
 
 async function tallyAccept(recordId){
   const r=STATE.tallyRows.find(x=>x.id===String(recordId));
-  if(!r) return;
+  if(!r) throw new Error("Tally reconciliation row was not found.");
   const c=tallySelectedCandidate(r);
-  if(!c){
-    toast("Click Suggest and select a Payment Requisition before accepting.","error");
-    return;
-  }
-
-  const d=r.raw;
-  const text=[
-    "Accept this Tally payment?",
-    "",
-    `Tally Amount: ${money(cleanAmount(d.Imported_Amount))}`,
-    `Tally PO: ${valueText(d.PO_Number)||"-"}`,
-    `Tally Vendor: ${valueText(d.Vendor_Name_Import)||"-"}`,
-    "",
-    `Selected Creator PO: ${c.po||c.id}`,
-    `Selected Vendor: ${c.vendor||"-"}`,
-    `Selected Eligible Amount: ${money(c.amount)}`,
-    `Match Score: ${Math.round(c.score)}%`,
-    "",
-    "The selected match will be saved to Match_Invoce_Report, then Accept_Tally_Payment will create Payment_detals2 and lock this reconciliation."
-  ].join("\n");
-
-  if(!confirm(text)) return;
+  if(!c) throw new Error("Use Suggest / Change PO and select a Payment Requisition before accepting.");
 
   try{
     r.busy=true;
@@ -2784,11 +3145,11 @@ async function tallyAccept(recordId){
     await persistTallySelectedMatch(r,c);
     r.busy=false;
     renderTallyTable();
-    await invokeTallyAction(r,"ACCEPT");
+    return await invokeTallyAction(r,"ACCEPT");
   }catch(err){
     r.busy=false;
     renderTallyTable();
-    toast(err.message||String(err),"error");
+    throw err;
   }
 }
 
