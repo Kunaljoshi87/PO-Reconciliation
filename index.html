@@ -252,7 +252,25 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
 .tally-actions{display:flex;gap:6px;flex-wrap:wrap}
 .tally-meta{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.4}
 .tally-lock{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;background:var(--graySoft);font-size:10.5px;font-weight:800;color:var(--gray)}
-@media(max-width:900px){.tally-stats{grid-template-columns:repeat(2,1fr)}}
+.tally-selected-card{border:1px solid var(--border);border-radius:10px;padding:8px 9px;background:#fff;min-width:245px}
+.tally-selected-card .po{font-size:12px;font-weight:900;color:var(--ink)}
+.tally-selected-card .meta{font-size:10.8px;color:var(--muted);margin-top:3px;line-height:1.4}
+.tally-selected-card .tag{display:inline-flex;margin-top:5px;padding:3px 6px;border-radius:999px;background:var(--brandSoft);color:var(--brand);font-size:10px;font-weight:900}
+.suggest-context{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:13px}
+.suggest-context .box{border:1px solid var(--border);border-radius:11px;padding:9px 10px;background:#fafbfc}
+.suggest-context .k{font-size:10px;color:var(--muted);font-weight:900;text-transform:uppercase;letter-spacing:.03em}
+.suggest-context .v{font-size:12px;font-weight:900;margin-top:3px;word-break:break-word}
+.suggest-search-row{display:flex;gap:8px;align-items:center;margin:12px 0}
+.suggest-search-row input{flex:1;border:1px solid var(--border);border-radius:10px;padding:10px 11px;outline:none}
+.suggest-list{display:flex;flex-direction:column;gap:8px}
+.suggest-item{border:1px solid var(--border);border-radius:13px;padding:11px 12px;display:grid;grid-template-columns:44px minmax(0,1fr) 110px 92px;gap:10px;align-items:center;background:#fff}
+.suggest-item.selected{border-color:#d781ad;background:#fff8fc}
+.suggest-rank{width:34px;height:34px;border-radius:10px;background:var(--graySoft);display:grid;place-items:center;font-size:12px;font-weight:900;color:var(--gray)}
+.suggest-po{font-size:12.5px;font-weight:900}
+.suggest-meta{font-size:11px;color:var(--muted);line-height:1.45;margin-top:2px}
+.suggest-money{font-size:12px;font-weight:900;text-align:right}
+.suggest-score{font-size:13px;font-weight:900;color:var(--brand);text-align:center}
+@media(max-width:900px){.tally-stats{grid-template-columns:repeat(2,1fr)}.suggest-context{grid-template-columns:repeat(2,1fr)}.suggest-item{grid-template-columns:38px minmax(0,1fr) 90px}}
 
 </style>
 </head>
@@ -263,7 +281,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
     <div class="title-wrap">
       <div class="logo">PR</div>
       <div>
-        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v11</span></h1>
+        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v12</span></h1>
         <div class="subtitle">
           Upload an Excel/CSV payment list, compare each row with live Payment Requisition records,
           review exact and suggested matches, choose an alternate candidate when needed, and update
@@ -384,7 +402,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
     <div class="tally-header">
       <div>
         <div class="section-title">Tally Live Payment Review</div>
-        <div class="tally-note">These records are already synced from Tally into <b>Payment_Reconciliation_Import</b>. Review the Creator match and click Accept only after confirmation. Accepted or rejected rows disappear from this open queue.</div>
+        <div class="tally-note">These records are already synced from Tally into <b>Payment_Reconciliation_Import</b>. Use <b>Suggest</b> to open the best live Payment Requisition matches, select the correct PO, then click <b>Accept</b>. The widget no longer depends on the Match_Suggestions subform.</div>
       </div>
       <div class="tally-filter-row">
         <select id="tallyCompanyFilter" onchange="renderTallyTable()">
@@ -432,13 +450,13 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
             <th>Score</th>
             <th>System Amount</th>
             <th>Difference</th>
-            <th>Payment Requisition / Suggestion</th>
+            <th>Selected Payment Requisition</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody id="tallyResultBody"></tbody>
       </table>
-      <div id="tallyEmpty" class="empty hidden"><strong>No open Tally payments found.</strong>Accepted and Rejected records are intentionally excluded from this queue.</div>
+      <div id="tallyEmpty" class="empty hidden"><strong>No open Tally payments found.</strong>Accepted records are removed from this open queue. Older Rejected records, if any, also remain excluded.</div>
     </div>
   </section>
 </div>
@@ -507,6 +525,27 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
   </div>
 </div>
 
+<div id="tallySuggestModal" class="modal-backdrop hidden">
+  <div class="modal" style="width:min(1080px,96vw)">
+    <div class="modal-head">
+      <div>
+        <strong>Suggested Payment Requisitions</strong>
+        <div class="cell-sub" style="margin-top:3px">Best matches are calculated live from All_Payment_Requisitions_INR. No Match_Suggestions subform is used.</div>
+      </div>
+      <button class="btn small" onclick="closeTallySuggestions()">Close</button>
+    </div>
+    <div class="modal-body">
+      <div id="tallySuggestContext"></div>
+      <div class="suggest-search-row">
+        <input id="tallySuggestSearch" placeholder="Search PO / vendor / project / eligible amount..." oninput="renderTallySuggestions()">
+        <button class="btn" onclick="document.getElementById('tallySuggestSearch').value='';renderTallySuggestions()">Clear</button>
+      </div>
+      <div class="section-sub">Select the correct Payment Requisition. The selected PR will be saved back to Match_Invoce_Report when you click Accept.</div>
+      <div id="tallySuggestList" class="suggest-list"></div>
+    </div>
+  </div>
+</div>
+
 <div id="toastWrap" class="toast-wrap"></div>
 
 <script>
@@ -518,8 +557,8 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
    IMPORTANT:
    - These are Zoho Creator LINK NAMES, not display labels.
    - Confirm them in Creator Form/Report Builder if Diagnostics reports a mismatch.
-   - This widget NEVER adds a Payment_detals2 record.
-   - Accept Match updates an EXISTING Payment_detals2 record only.
+   - The existing Excel / CSV section keeps its current Payment_detals2 behavior.
+   - The Tally section never creates Payment_detals2 directly in JavaScript; it calls tally_payment_action / Accept_Tally_Payment.
 ============================================================================ */
 const CONFIG = {
   appName: "mega-engineering-sales",
@@ -573,6 +612,7 @@ const CONFIG = {
   mismatchMinScore: 50,
   strongSelectMinScore: 90,
   candidateCount: 5,
+  tallySuggestionCount: 15,
 
   // No record will be created if there is no existing Payment_detals2 record.
   allowCreatePaymentDetail: true,
@@ -656,6 +696,7 @@ const STATE = {
   tallyLoaded: false,
   tallyRows: [],
   tallyBusy: false,
+  tallySuggestRowId: null,
   reconciliationMode: "file"
 };
 
@@ -2316,54 +2357,75 @@ function tallyLookupId(v){
   return /^\d+$/.test(s) ? s : "";
 }
 
-function tallyCandidateList(d){
-  const out=[];
-  const seen=new Set();
-  const add=(id,po,vendor,amount,score,source)=>{
-    id=String(id||"").trim();
-    if(!id || seen.has(id)) return;
-    seen.add(id);
-    out.push({
-      id,
-      po:valueText(po,["PO_Number","PO_No"]),
-      vendor:valueText(vendor,["Vendor_Display_Name","Vendor_Name"]),
-      amount:cleanAmount(amount),
-      score:Number(cleanAmount(score)||0),
-      source:source||"Suggestion"
-    });
+function tallyInputView(d){
+  return {
+    po:valueText(d.PO_Number,["PO_Number","PO_No"]),
+    project:valueText(d.Project_Code_Import,["Project_Code"]),
+    vendor:valueText(d.Vendor_Name_Import,["Vendor_Display_Name","Vendor_Name"]),
+    amount:cleanAmount(d.Imported_Amount)
   };
+}
 
+function tallyCandidateFromScore(scored,source){
+  return {
+    id:String(scored?.rec?.id||""),
+    po:scored?.rec?.po||"",
+    project:scored?.rec?.project||"",
+    vendor:scored?.rec?.vendor||"",
+    amount:Number(scored?.rec?.eligible||0),
+    score:Number(scored?.score||0),
+    source:source||"Suggested",
+    diff:Number(scored?.diff||0),
+    diffPct:Number(scored?.diffPct||0),
+    exact:!!scored?.exact,
+    poExact:!!scored?.poExact,
+    projectExact:!!scored?.projectExact,
+    vendorExact:!!scored?.vendorExact
+  };
+}
+
+function tallyCurrentMatchCandidate(d){
   const matchedId=tallyLookupId(d.Matched_Payment_Requisition);
-  if(matchedId){
-    add(
-      matchedId,
-      d.System_PO_Number,
-      d.System_Vendor_Name,
-      d.System_Amount,
-      d.Match_Score,
-      "Current Match"
-    );
+  if(!matchedId) return null;
+
+  const live=STATE.paymentRequisitions.find(x=>String(x.ID)===matchedId);
+  if(live){
+    return tallyCandidateFromScore(scoreCandidate(tallyInputView(d),live),"Current Match");
   }
 
-  const suggestions=Array.isArray(d.Match_Suggestions) ? d.Match_Suggestions : [];
-  suggestions.forEach(s=>{
-    const id=tallyLookupId(s.Payment_Requisition);
-    add(id,s.Suggested_PO_Number,s.Suggested_Vendor_Name,s.Suggested_Amount,s.Score,"Suggested");
-  });
+  return {
+    id:matchedId,
+    po:valueText(d.System_PO_Number,["PO_Number","PO_No"]),
+    project:valueText(d.System_Project_Code,["Project_Code"]),
+    vendor:valueText(d.System_Vendor_Name,["Vendor_Display_Name","Vendor_Name"]),
+    amount:cleanAmount(d.System_Amount),
+    score:Number(cleanAmount(d.Match_Score)||0),
+    source:"Current Match",
+    diff:Math.abs(cleanAmount(d.Imported_Amount)-cleanAmount(d.System_Amount)),
+    diffPct:amountDiffPct(cleanAmount(d.Imported_Amount),cleanAmount(d.System_Amount)),
+    exact:false,
+    poExact:false,
+    projectExact:false,
+    vendorExact:false
+  };
+}
 
-  // If a report/API response did not expand Match_Suggestions, retain current matched PR.
-  return out.sort((a,b)=>b.score-a.score || Math.abs(a.amount-cleanAmount(d.Imported_Amount))-Math.abs(b.amount-cleanAmount(d.Imported_Amount)));
+// IMPORTANT: this list no longer reads Payment_Reconciliation_Import.Match_Suggestions.
+// The only candidate initially retained is the current matched Payment Requisition.
+// Best suggestions are calculated live from All_Payment_Requisitions_INR when Suggest is clicked.
+function tallyCandidateList(d){
+  const current=tallyCurrentMatchCandidate(d);
+  return current ? [current] : [];
 }
 
 function tallyBuildRow(d){
   const candidates=tallyCandidateList(d);
   const matchedId=tallyLookupId(d.Matched_Payment_Requisition);
-  const selected = matchedId || (candidates[0]?.id || "");
   return {
     id:String(d.ID||""),
     raw:d,
     candidates,
-    selectedPRID:selected,
+    selectedPRID:matchedId,
     busy:false
   };
 }
@@ -2415,10 +2477,12 @@ function tallyVisibleRows(){
     if(company && valueText(d.Tally_Company)!==company) return false;
     if(status && valueText(d.Match_Status)!==status) return false;
     if(!q) return true;
+    const c=tallySelectedCandidate(r);
     const hay=[
       d.Tally_Company,d.Tally_Voucher_Number,d.PO_Number,d.Project_Code_Import,
       d.Vendor_Name_Import,d.UTR_No_Import,d.Transaction_ID_Import,
-      d.System_PO_Number,d.System_Project_Code,d.System_Vendor_Name,d.Match_Status
+      d.System_PO_Number,d.System_Project_Code,d.System_Vendor_Name,d.Match_Status,
+      c?.po,c?.project,c?.vendor
     ].map(valueText).join(" ").toUpperCase();
     return hay.includes(q);
   });
@@ -2436,11 +2500,106 @@ function tallySelectedCandidate(r){
   return r.candidates.find(c=>String(c.id)===String(r.selectedPRID)) || null;
 }
 
-function tallyChooseCandidate(recordId,prId){
+function tallyBestCandidates(r,searchText){
+  if(!r) return [];
+  const inv=tallyInputView(r.raw);
+  const q=String(searchText||"").trim().toUpperCase();
+
+  return STATE.paymentRequisitions
+    .map(rec=>scoreCandidate(inv,rec))
+    .filter(x=>Number(x.rec.eligible||0)>0)
+    .filter(x=>{
+      if(!q) return true;
+      return [x.rec.po,x.rec.project,x.rec.vendor,String(x.rec.eligible)]
+        .join(" ").toUpperCase().includes(q);
+    })
+    .sort((a,b)=>b.score-a.score || a.diff-b.diff)
+    .slice(0,CONFIG.tallySuggestionCount)
+    .map((x,i)=>tallyCandidateFromScore(x,i===0?"Best Match":"Suggested"));
+}
+
+function openTallySuggestions(recordId){
   const r=STATE.tallyRows.find(x=>x.id===String(recordId));
+  if(!r){toast("Tally reconciliation row was not found.","error");return}
+  if(!STATE.paymentRequisitions.length){
+    toast("Payment Requisition data is not loaded. Click Refresh Creator Data first.","error");
+    return;
+  }
+
+  STATE.tallySuggestRowId=String(recordId);
+  const search=document.getElementById("tallySuggestSearch");
+  if(search) search.value="";
+
+  const d=r.raw;
+  document.getElementById("tallySuggestContext").innerHTML=`
+    <div class="suggest-context">
+      <div class="box"><div class="k">Tally PO</div><div class="v">${htmlEscape(valueText(d.PO_Number)||"—")}</div></div>
+      <div class="box"><div class="k">Project</div><div class="v">${htmlEscape(valueText(d.Project_Code_Import)||"—")}</div></div>
+      <div class="box"><div class="k">Tally Vendor</div><div class="v">${htmlEscape(valueText(d.Vendor_Name_Import)||"—")}</div></div>
+      <div class="box"><div class="k">Tally Amount</div><div class="v">${money(cleanAmount(d.Imported_Amount))}</div></div>
+    </div>`;
+
+  renderTallySuggestions();
+  document.getElementById("tallySuggestModal").classList.remove("hidden");
+}
+
+function closeTallySuggestions(){
+  document.getElementById("tallySuggestModal").classList.add("hidden");
+  STATE.tallySuggestRowId=null;
+}
+
+function renderTallySuggestions(){
+  const out=document.getElementById("tallySuggestList");
+  if(!out) return;
+  const r=STATE.tallyRows.find(x=>x.id===String(STATE.tallySuggestRowId));
+  if(!r){out.innerHTML='<div class="empty">No reconciliation row selected.</div>';return}
+
+  const q=document.getElementById("tallySuggestSearch")?.value||"";
+  let candidates=tallyBestCandidates(r,q);
+
+  // Keep the current/selected PR visible even if it is outside the top ranking.
+  const current=tallySelectedCandidate(r);
+  if(current && !candidates.some(x=>String(x.id)===String(current.id))){
+    candidates=[current,...candidates].slice(0,CONFIG.tallySuggestionCount);
+  }
+
+  out.innerHTML=candidates.map((c,i)=>`
+    <div class="suggest-item ${String(c.id)===String(r.selectedPRID)?"selected":""}">
+      <div class="suggest-rank">${i+1}</div>
+      <div>
+        <div class="suggest-po">${htmlEscape(c.po||"PR "+c.id)}</div>
+        <div class="suggest-meta">${htmlEscape(c.project||"—")} · ${htmlEscape(c.vendor||"—")}</div>
+        <div class="suggest-meta">Difference ${money(c.diff)} · ${pct(c.diffPct)} · ${htmlEscape(c.source||"Suggested")}</div>
+      </div>
+      <div class="suggest-money">${money(c.amount)}</div>
+      <div>
+        <div class="suggest-score">${Math.round(c.score)}%</div>
+        <button class="btn small ${String(c.id)===String(r.selectedPRID)?"primary":""}" style="width:100%;margin-top:5px" onclick="selectTallySuggestion('${htmlEscape(c.id)}')">${String(c.id)===String(r.selectedPRID)?"Selected":"Select"}</button>
+      </div>
+    </div>
+  `).join("") || '<div class="empty"><strong>No Payment Requisition found.</strong>Try another search.</div>';
+}
+
+function selectTallySuggestion(prId){
+  const r=STATE.tallyRows.find(x=>x.id===String(STATE.tallySuggestRowId));
   if(!r) return;
-  r.selectedPRID=String(prId||"");
+
+  const scored=tallyBestCandidates(r,"").find(x=>String(x.id)===String(prId)) || (()=>{
+    const rec=STATE.paymentRequisitions.find(x=>String(x.ID)===String(prId));
+    return rec ? tallyCandidateFromScore(scoreCandidate(tallyInputView(r.raw),rec),"User Selected") : null;
+  })();
+
+  if(!scored){toast("Selected Payment Requisition could not be loaded.","error");return}
+  scored.source="User Selected";
+
+  const existing=r.candidates.findIndex(x=>String(x.id)===String(scored.id));
+  if(existing>=0) r.candidates[existing]=scored;
+  else r.candidates.push(scored);
+
+  r.selectedPRID=String(scored.id);
   renderTallyTable();
+  closeTallySuggestions();
+  toast(`Selected ${scored.po||scored.id}. Click Accept to finalize.`,"success");
 }
 
 function renderTallyTable(){
@@ -2455,31 +2614,36 @@ function renderTallyTable(){
     const status=valueText(d.Match_Status).trim() || "Pending";
     const c=tallySelectedCandidate(r);
     const imported=cleanAmount(d.Imported_Amount);
-    const system=cleanAmount(d.System_Amount);
-    const diff=cleanAmount(d.Amount_Difference || Math.abs(imported-system));
-    const options=r.candidates.map(x=>{
-      const label=`${x.source}: ${x.po||"PR"} | ${x.vendor||""} | ${money(x.amount)} | ${x.score}`;
-      return `<option value="${htmlEscape(x.id)}" ${String(x.id)===String(r.selectedPRID)?"selected":""}>${htmlEscape(label)}</option>`;
-    }).join("");
+    const selectedSystem=c?Number(c.amount||0):cleanAmount(d.System_Amount);
+    const selectedDiff=c?Math.abs(imported-selectedSystem):cleanAmount(d.Amount_Difference || Math.abs(imported-selectedSystem));
+    const selectedScore=c?Number(c.score||0):Number(cleanAmount(d.Match_Score)||0);
+
+    const selectedHtml=c ? `
+      <div class="tally-selected-card">
+        <div class="po">${htmlEscape(c.po||"PR "+c.id)}</div>
+        <div class="meta">${htmlEscape(c.project||"—")} · ${htmlEscape(c.vendor||"—")}</div>
+        <div class="meta">Eligible ${money(c.amount)} · Score ${Math.round(c.score)}%</div>
+        <span class="tag">${htmlEscape(c.source||"Selected")}</span>
+      </div>` : '<span class="tally-lock">No Payment Requisition selected</span>';
 
     const tr=document.createElement("tr");
     tr.className="data-row"+(r.busy?" tally-row-busy":"");
     tr.innerHTML=`
       <td><div class="cell-main">${htmlEscape(valueText(d.Tally_Company)||"—")}</div><div class="cell-sub">Voucher: ${htmlEscape(valueText(d.Tally_Voucher_Number)||"—")}</div></td>
       <td><div class="cell-main">${htmlEscape(valueText(d.Payment_Record_Date_Import)||"—")}</div><div class="cell-sub">${htmlEscape(valueText(d.Tally_Voucher_Type)||"")}</div></td>
-      <td><div class="cell-main">${htmlEscape(valueText(d.PO_Number)||"—")}</div><div class="cell-sub">Creator: ${htmlEscape(valueText(d.System_PO_Number)||"—")}</div></td>
-      <td><div class="cell-main">${htmlEscape(valueText(d.Project_Code_Import)||"—")}</div><div class="cell-sub">Creator: ${htmlEscape(valueText(d.System_Project_Code)||"—")}</div></td>
-      <td><div class="cell-main">${htmlEscape(valueText(d.Vendor_Name_Import)||"—")}</div><div class="cell-sub">Creator: ${htmlEscape(valueText(d.System_Vendor_Name)||"—")}</div></td>
+      <td><div class="cell-main">${htmlEscape(valueText(d.PO_Number)||"—")}</div><div class="cell-sub">Creator: ${htmlEscape(c?.po||valueText(d.System_PO_Number)||"—")}</div></td>
+      <td><div class="cell-main">${htmlEscape(valueText(d.Project_Code_Import)||"—")}</div><div class="cell-sub">Creator: ${htmlEscape(c?.project||valueText(d.System_Project_Code)||"—")}</div></td>
+      <td><div class="cell-main">${htmlEscape(valueText(d.Vendor_Name_Import)||"—")}</div><div class="cell-sub">Creator: ${htmlEscape(c?.vendor||valueText(d.System_Vendor_Name)||"—")}</div></td>
       <td class="money">${money(imported)}</td>
       <td><div class="cell-main">${htmlEscape(valueText(d.UTR_No_Import)||valueText(d.Transaction_ID_Import)||valueText(d.Cheque_No_Import)||"—")}</div><div class="cell-sub">${htmlEscape(valueText(d.Payment_Type_Import)||"")}</div></td>
       <td><span class="status ${tallyStatusClass(status)}">${htmlEscape(status)}</span></td>
-      <td class="score">${htmlEscape(valueText(d.Match_Score)||"0")}</td>
-      <td class="money">${money(system)}</td>
-      <td class="money">${money(diff)}</td>
-      <td>${options?`<select class="tally-select" onchange="tallyChooseCandidate('${htmlEscape(r.id)}',this.value)">${options}</select>`:`<span class="tally-lock">No selectable suggestion</span>`}${c?`<div class="tally-meta">Selected: ${htmlEscape(c.po||"")} · ${htmlEscape(c.vendor||"")} · ${money(c.amount)}</div>`:""}</td>
+      <td class="score">${Math.round(selectedScore)}</td>
+      <td class="money">${money(selectedSystem)}</td>
+      <td class="money">${money(selectedDiff)}</td>
+      <td>${selectedHtml}</td>
       <td><div class="tally-actions">
+        <button class="btn small" ${r.busy?"disabled":""} onclick="openTallySuggestions('${htmlEscape(r.id)}')">Suggest</button>
         <button class="btn primary small" ${!r.selectedPRID||r.busy?"disabled":""} onclick="tallyAccept('${htmlEscape(r.id)}')">Accept</button>
-        <button class="btn danger small" ${r.busy?"disabled":""} onclick="tallyReject('${htmlEscape(r.id)}')">Reject</button>
       </div></td>`;
     body.appendChild(tr);
   }
@@ -2497,6 +2661,57 @@ function customApiMessage(response){
     }
   }
   try{return JSON.stringify(response)}catch(_e){return String(response)}
+}
+
+// Save the user's selected Payment Requisition back to Payment_Reconciliation_Import
+// through Match_Invoce_Report. This replaces the old Match_Suggestions subform dependency.
+async function persistTallySelectedMatch(r,c){
+  if(!r || !c) throw new Error("Select a Payment Requisition before accepting.");
+  if(!(ZOHO.CREATOR.DATA && ZOHO.CREATOR.DATA.updateRecordById)){
+    throw new Error("Creator Update Record API is not available in this widget session.");
+  }
+
+  const imported=cleanAmount(r.raw.Imported_Amount);
+  const difference=round2(Math.abs(imported-Number(c.amount||0)));
+  const differencePct=round2(amountDiffPct(imported,Number(c.amount||0)));
+
+  const data={
+    Matched_Payment_Requisition:String(c.id),
+    System_PO_Number:String(c.po||""),
+    System_Project_Code:String(c.project||""),
+    System_Vendor_Name:String(c.vendor||""),
+    System_Amount:Number(c.amount||0),
+    Amount_Difference:difference,
+    Difference_Percentage:differencePct,
+    Match_Score:Number(c.score||0)
+  };
+
+  const response=await ZOHO.CREATOR.DATA.updateRecordById({
+    app_name:CONFIG.appName,
+    report_name:CONFIG.tallyImportReport,
+    id:String(r.id),
+    payload:{
+      data,
+      skip_workflow:["form_workflow"]
+    }
+  });
+
+  if(response && response.code && Number(response.code)!==3000){
+    const creatorErrors=Array.isArray(response.error)?response.error.join(" | "):"";
+    throw new Error(creatorErrors || response.message || JSON.stringify(response));
+  }
+
+  // Keep the row display synchronized until the report is reloaded after Accept.
+  r.raw.Matched_Payment_Requisition={ID:String(c.id)};
+  r.raw.System_PO_Number=c.po||"";
+  r.raw.System_Project_Code=c.project||"";
+  r.raw.System_Vendor_Name=c.vendor||"";
+  r.raw.System_Amount=Number(c.amount||0);
+  r.raw.Amount_Difference=difference;
+  r.raw.Difference_Percentage=differencePct;
+  r.raw.Match_Score=Number(c.score||0);
+
+  return response;
 }
 
 async function invokeTallyAction(r,action){
@@ -2525,12 +2740,10 @@ async function invokeTallyAction(r,action){
     if(response && response.code && ![200,201,202,3000].includes(Number(response.code))){
       throw new Error(msg || `Custom API failed with code ${response.code}`);
     }
-    toast((msg && msg.includes("SUCCESS|")) ? msg.replace(/^SUCCESS\|/i,"") : (action==="ACCEPT"?"Payment accepted successfully.":"Payment rejected successfully."),"success");
+    toast((msg && msg.includes("SUCCESS|")) ? msg.replace(/^SUCCESS\|/i,"") : "Payment accepted successfully.","success");
     await loadTallyPayments(false);
     // Refresh Payment Details count/cache because Accept creates a new Payment_detals2 record.
-    if(action==="ACCEPT"){
-      try{await refreshCreatorData()}catch(_e){}
-    }
+    try{await refreshCreatorData()}catch(_e){}
     return response;
   }finally{
     r.busy=false;
@@ -2542,28 +2755,41 @@ async function tallyAccept(recordId){
   const r=STATE.tallyRows.find(x=>x.id===String(recordId));
   if(!r) return;
   const c=tallySelectedCandidate(r);
-  if(!c){toast("Select a Payment Requisition before accepting.","error");return}
+  if(!c){
+    toast("Click Suggest and select a Payment Requisition before accepting.","error");
+    return;
+  }
+
   const d=r.raw;
   const text=[
     "Accept this Tally payment?",
     "",
     `Tally Amount: ${money(cleanAmount(d.Imported_Amount))}`,
-    `PO: ${valueText(d.PO_Number)||"-"}`,
-    `Vendor: ${valueText(d.Vendor_Name_Import)||"-"}`,
-    `Selected Creator PR: ${c.po||c.id}`,
-    `Selected Eligible Amount: ${money(c.amount)}`,
+    `Tally PO: ${valueText(d.PO_Number)||"-"}`,
+    `Tally Vendor: ${valueText(d.Vendor_Name_Import)||"-"}`,
     "",
-    "A Payment_detals2 record will be created and this reconciliation will be locked."
+    `Selected Creator PO: ${c.po||c.id}`,
+    `Selected Vendor: ${c.vendor||"-"}`,
+    `Selected Eligible Amount: ${money(c.amount)}`,
+    `Match Score: ${Math.round(c.score)}%`,
+    "",
+    "The selected match will be saved to Match_Invoce_Report, then Accept_Tally_Payment will create Payment_detals2 and lock this reconciliation."
   ].join("\n");
-  if(!confirm(text)) return;
-  try{await invokeTallyAction(r,"ACCEPT")}catch(err){toast(err.message||String(err),"error")}
-}
 
-async function tallyReject(recordId){
-  const r=STATE.tallyRows.find(x=>x.id===String(recordId));
-  if(!r) return;
-  if(!confirm("Reject this Tally reconciliation?\n\nNo Payment_detals2 record will be created and the row will leave the open queue.")) return;
-  try{await invokeTallyAction(r,"REJECT")}catch(err){toast(err.message||String(err),"error")}
+  if(!confirm(text)) return;
+
+  try{
+    r.busy=true;
+    renderTallyTable();
+    await persistTallySelectedMatch(r,c);
+    r.busy=false;
+    renderTallyTable();
+    await invokeTallyAction(r,"ACCEPT");
+  }catch(err){
+    r.busy=false;
+    renderTallyTable();
+    toast(err.message||String(err),"error");
+  }
 }
 
 /* ============================== STARTUP ==================================== */
