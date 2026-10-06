@@ -308,7 +308,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
 @media(max-width:650px){.tally-fields,.preview-grid{grid-template-columns:1fr}.tally-card-list{padding:10px}.tally-payment-body{padding:12px}.tally-payment-head,.tally-payment-foot{padding:12px}}
 @media(max-width:900px){.tally-stats{grid-template-columns:repeat(2,1fr)}.suggest-context{grid-template-columns:repeat(2,1fr)}.suggest-item{grid-template-columns:38px minmax(0,1fr) 90px}}
 
-/* Build v14 - Accept Payment validation / confirmation popup */
+/* Build v15 - Accept Payment validation / confirmation popup + confirmed overpayment action */
 .accept-check-backdrop{
   position:fixed;inset:0;background:rgba(19,25,39,.38);z-index:140;
   display:grid;place-items:center;padding:20px
@@ -347,7 +347,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
     <div class="title-wrap">
       <div class="logo">PR</div>
       <div>
-        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v14</span></h1>
+        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v15</span></h1>
         <div class="subtitle">
           Upload an Excel/CSV payment list, compare each row with live Payment Requisition records,
           review exact and suggested matches, choose an alternate candidate when needed, and update
@@ -2875,7 +2875,7 @@ function openTallyReview(recordId){
   STATE.tallyReviewRowId=String(recordId);
   const p=tallyBuildPreview(r);
   const warning=p.remainingAfter < -CONFIG.exactAmountTolerance
-    ? `<div class="preview-warning"><b>Overpayment warning:</b> this payment is greater than the calculated remaining amount by ${money(Math.abs(p.remainingAfter))}. The backend will still apply its own overpayment protection and can reject the Accept action.</div>`
+    ? `<div class="preview-warning"><b>Overpayment warning:</b> this payment is greater than the calculated remaining amount by ${money(Math.abs(p.remainingAfter))}. If you continue, this overpayment will be sent to the backend as an explicitly confirmed overpayment.</div>`
     : `<div class="preview-ok"><b>Ready for review.</b> This preview uses the selected Payment Requisition plus the Tally reconciliation record. Blank fields mean that no source value was returned. The backend remains authoritative for final payment balance and locking.</div>`;
 
   document.getElementById("tallyReviewBody").innerHTML=`
@@ -3206,7 +3206,7 @@ async function acceptTallyFromReview(){
   const btn=document.getElementById("tallyReviewAcceptBtn");
   if(btn) btn.disabled=true;
   try{
-    await tallyAccept(id);
+    await tallyAccept(id,check.warning===true);
     closeTallyReview();
   }catch(err){
     toast(err.message||String(err),"error");
@@ -3283,7 +3283,8 @@ async function persistTallySelectedMatch(r,c){
 async function invokeTallyAction(r,action){
   if(!r) throw new Error("Tally reconciliation row was not found.");
   if(r.busy) return;
-  if(action==="ACCEPT" && !r.selectedPRID) throw new Error("Select a Payment Requisition before accepting.");
+  const isAcceptAction=String(action||"").toUpperCase().startsWith("ACCEPT");
+  if(isAcceptAction && !r.selectedPRID) throw new Error("Select a Payment Requisition before accepting.");
 
   r.busy=true;
   renderTallyTable();
@@ -3295,7 +3296,7 @@ async function invokeTallyAction(r,action){
       payload:{
         reconciliationID:String(r.id),
         action:String(action),
-        selectedPaymentRequisitionID:action==="ACCEPT"?String(r.selectedPRID||""):""
+        selectedPaymentRequisitionID:isAcceptAction?String(r.selectedPRID||""):""
       }
     };
     const response=await ZOHO.CREATOR.DATA.invokeCustomApi(cfg);
@@ -3311,7 +3312,7 @@ async function invokeTallyAction(r,action){
 
     // Backend remains authoritative for creation/locking. After creation, enrich the
     // newly-created Payment_detals2 record with other available PR + reconciliation fields.
-    if(action==="ACCEPT" && newPaymentDetailId){
+    if(isAcceptAction && newPaymentDetailId){
       const enrichment=await enrichAcceptedPaymentDetail(r,newPaymentDetailId);
       if(enrichment.failed.length){
         console.warn("Payment detail enrichment skipped some fields:",enrichment.failed);
@@ -3333,7 +3334,7 @@ async function invokeTallyAction(r,action){
   }
 }
 
-async function tallyAccept(recordId){
+async function tallyAccept(recordId,allowOverpayment){
   const r=STATE.tallyRows.find(x=>x.id===String(recordId));
   if(!r) throw new Error("Tally reconciliation row was not found.");
   const c=tallySelectedCandidate(r);
@@ -3345,7 +3346,7 @@ async function tallyAccept(recordId){
     await persistTallySelectedMatch(r,c);
     r.busy=false;
     renderTallyTable();
-    return await invokeTallyAction(r,"ACCEPT");
+    return await invokeTallyAction(r,allowOverpayment?"ACCEPT_OVERPAYMENT":"ACCEPT");
   }catch(err){
     r.busy=false;
     renderTallyTable();
