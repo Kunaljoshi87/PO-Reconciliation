@@ -308,6 +308,36 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
 @media(max-width:650px){.tally-fields,.preview-grid{grid-template-columns:1fr}.tally-card-list{padding:10px}.tally-payment-body{padding:12px}.tally-payment-head,.tally-payment-foot{padding:12px}}
 @media(max-width:900px){.tally-stats{grid-template-columns:repeat(2,1fr)}.suggest-context{grid-template-columns:repeat(2,1fr)}.suggest-item{grid-template-columns:38px minmax(0,1fr) 90px}}
 
+/* Build v14 - Accept Payment validation / confirmation popup */
+.accept-check-backdrop{
+  position:fixed;inset:0;background:rgba(19,25,39,.38);z-index:140;
+  display:grid;place-items:center;padding:20px
+}
+.accept-check-modal{
+  width:min(560px,96vw);background:#fff;border:1px solid var(--border);border-radius:18px;
+  box-shadow:0 24px 70px rgba(15,23,42,.24);overflow:hidden
+}
+.accept-check-head{padding:18px 20px 12px;display:flex;gap:12px;align-items:flex-start}
+.accept-check-icon{
+  width:42px;height:42px;border-radius:13px;display:grid;place-items:center;
+  font-size:21px;font-weight:900;flex:0 0 auto
+}
+.accept-check-modal.confirm .accept-check-icon{background:var(--greenSoft);color:var(--green)}
+.accept-check-modal.warning .accept-check-icon{background:var(--amberSoft);color:var(--amber)}
+.accept-check-modal.blocked .accept-check-icon{background:var(--redSoft);color:var(--red)}
+.accept-check-title{font-size:17px;font-weight:900;line-height:1.3;margin-top:2px}
+.accept-check-message{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:5px}
+.accept-check-body{padding:0 20px 16px}
+.accept-check-details{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fafbfc}
+.accept-check-row{display:grid;grid-template-columns:190px 1fr;gap:10px;padding:9px 11px;border-bottom:1px solid #edf0f4;font-size:12px}
+.accept-check-row:last-child{border-bottom:0}
+.accept-check-row .k{font-weight:800;color:var(--muted)}
+.accept-check-row .v{font-weight:850;color:var(--ink);word-break:break-word}
+.accept-check-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;background:#fff}
+.accept-check-foot .btn.warning-action{background:var(--amber);color:#fff;border-color:var(--amber)}
+.accept-check-foot .btn.warning-action:hover{filter:brightness(.95)}
+@media(max-width:560px){.accept-check-row{grid-template-columns:1fr;gap:3px}}
+
 </style>
 </head>
 
@@ -317,7 +347,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
     <div class="title-wrap">
       <div class="logo">PR</div>
       <div>
-        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v13</span></h1>
+        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v14</span></h1>
         <div class="subtitle">
           Upload an Excel/CSV payment list, compare each row with live Payment Requisition records,
           review exact and suggested matches, choose an alternate candidate when needed, and update
@@ -576,6 +606,25 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
         <button class="btn" onclick="closeTallyReview()">Back</button>
         <button id="tallyReviewAcceptBtn" class="btn primary" onclick="acceptTallyFromReview()">Accept Payment</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<div id="tallyAcceptPopup" class="accept-check-backdrop hidden">
+  <div id="tallyAcceptPopupCard" class="accept-check-modal confirm">
+    <div class="accept-check-head">
+      <div id="tallyAcceptPopupIcon" class="accept-check-icon">✓</div>
+      <div>
+        <div id="tallyAcceptPopupTitle" class="accept-check-title">Confirm Payment</div>
+        <div id="tallyAcceptPopupMessage" class="accept-check-message"></div>
+      </div>
+    </div>
+    <div class="accept-check-body">
+      <div id="tallyAcceptPopupDetails" class="accept-check-details"></div>
+    </div>
+    <div class="accept-check-foot">
+      <button id="tallyAcceptPopupCancelBtn" class="btn" onclick="resolveTallyAcceptPopup(false)">Cancel</button>
+      <button id="tallyAcceptPopupOkBtn" class="btn primary" onclick="resolveTallyAcceptPopup(true)">Accept Payment</button>
     </div>
   </div>
 </div>
@@ -3000,9 +3049,160 @@ function extractPaymentDetailId(response){
   return m ? m[1] : "";
 }
 
+let TALLY_ACCEPT_POPUP_RESOLVER=null;
+
+function resolveTallyAcceptPopup(result){
+  const popup=document.getElementById("tallyAcceptPopup");
+  if(popup) popup.classList.add("hidden");
+  const resolver=TALLY_ACCEPT_POPUP_RESOLVER;
+  TALLY_ACCEPT_POPUP_RESOLVER=null;
+  if(resolver) resolver(!!result);
+}
+
+function showTallyAcceptPopup(options){
+  options=options||{};
+  const type=options.type||"confirm"; // confirm | warning | blocked
+  const popup=document.getElementById("tallyAcceptPopup");
+  const card=document.getElementById("tallyAcceptPopupCard");
+  const icon=document.getElementById("tallyAcceptPopupIcon");
+  const title=document.getElementById("tallyAcceptPopupTitle");
+  const message=document.getElementById("tallyAcceptPopupMessage");
+  const details=document.getElementById("tallyAcceptPopupDetails");
+  const cancelBtn=document.getElementById("tallyAcceptPopupCancelBtn");
+  const okBtn=document.getElementById("tallyAcceptPopupOkBtn");
+
+  card.className="accept-check-modal "+type;
+  icon.textContent=type==="blocked"?"!":(type==="warning"?"⚠":"✓");
+  title.textContent=options.title||"Confirm Payment";
+  message.textContent=options.message||"";
+
+  const rows=Array.isArray(options.details)?options.details:[];
+  details.innerHTML=rows.map(row=>`
+    <div class="accept-check-row">
+      <div class="k">${htmlEscape(row[0]||"")}</div>
+      <div class="v">${htmlEscape(row[1]===undefined||row[1]===null?"—":String(row[1]))}</div>
+    </div>`).join("") || '<div class="accept-check-row"><div class="v" style="grid-column:1/-1">No additional details.</div></div>';
+
+  const showCancel=options.showCancel!==false && type!=="blocked";
+  cancelBtn.classList.toggle("hidden",!showCancel);
+  cancelBtn.textContent=options.cancelText||"Cancel";
+  okBtn.textContent=options.confirmText||(type==="blocked"?"OK":(type==="warning"?"Continue & Accept":"Accept Payment"));
+  okBtn.className="btn "+(type==="warning"?"warning-action":"primary");
+
+  popup.classList.remove("hidden");
+  return new Promise(resolve=>{TALLY_ACCEPT_POPUP_RESOLVER=resolve;});
+}
+
+function findTallyDuplicatePayment(r){
+  const d=r?.raw||{};
+  const utr=String(valueText(d.UTR_No_Import)||"").trim().toUpperCase();
+  const txn=String(valueText(d.Transaction_ID_Import)||"").trim().toUpperCase();
+
+  for(const rec of STATE.paymentDetails){
+    const pd=pdView(rec);
+    if(utr && String(pd.utr||"").trim().toUpperCase()===utr){
+      return {type:"UTR",value:utr,recordId:pd.id};
+    }
+    if(txn && String(pd.transactionId||"").trim().toUpperCase()===txn){
+      return {type:"Transaction ID",value:txn,recordId:pd.id};
+    }
+  }
+  return null;
+}
+
+function buildTallyAcceptCheck(r){
+  const d=r?.raw||{};
+  const c=tallySelectedCandidate(r);
+  const pr=tallySelectedPRRaw(r)||{};
+  const imported=cleanAmount(d.Imported_Amount);
+  const status=valueText(d.Match_Status).trim();
+  const createdPaymentDetail=tallyLookupId(d.Created_Payment_Detail) || valueText(d.Created_Payment_Detail).trim();
+
+  const baseDetails=[
+    ["Tally PO",valueText(d.PO_Number)||"—"],
+    ["Selected Creator PO",c?.po||"—"],
+    ["Vendor",c?.vendor||valueText(d.Vendor_Name_Import)||"—"],
+    ["Tally Payment",money(imported)],
+    ["UTR",valueText(d.UTR_No_Import)||"—"],
+    ["Transaction ID",valueText(d.Transaction_ID_Import)||"—"]
+  ];
+
+  if(!c || !r.selectedPRID){
+    return {blocked:true,title:"Payment Requisition Required",message:"Select a Payment Requisition before accepting this Tally payment.",details:baseDetails};
+  }
+
+  if(status==="Accepted" || createdPaymentDetail){
+    return {blocked:true,title:"Already Accepted",message:"This reconciliation has already been accepted. A second payment record cannot be created.",details:baseDetails.concat([["Created Payment Detail",createdPaymentDetail||"Already Accepted"]])};
+  }
+
+  const eligible=cleanAmount(pr[CONFIG.paymentRequisitionFields.eligible]);
+  if(!(eligible>0)){
+    return {blocked:true,title:"Eligible Payment Missing",message:"Eligible Payment is blank or zero. Payment cannot be accepted.",details:baseDetails.concat([["Eligible Payment",money(eligible)]])};
+  }
+
+  const duplicate=findTallyDuplicatePayment(r);
+  if(duplicate){
+    return {blocked:true,title:`Duplicate ${duplicate.type}`,message:`This ${duplicate.type} already exists in Payment Details. Payment cannot be accepted again.`,details:baseDetails.concat([["Existing Payment Detail ID",duplicate.recordId||"—"]])};
+  }
+
+  const alreadyPaid=tallyAlreadyPaidForPR(r.selectedPRID);
+  const remainingBefore=Math.max(0,round2(eligible-alreadyPaid));
+  const excess=round2(imported-remainingBefore);
+  const common=baseDetails.concat([
+    ["Eligible Payment",money(eligible)],
+    ["Already Paid",money(alreadyPaid)],
+    ["Remaining Before",money(remainingBefore)]
+  ]);
+
+  if(excess>CONFIG.exactAmountTolerance){
+    return {
+      blocked:false,
+      warning:true,
+      title:"Overpayment Warning",
+      message:`Tally payment exceeds the remaining Eligible Payment by ${money(excess)}. Review the amounts carefully before continuing.`,
+      details:common.concat([["Excess Amount",money(excess)]])
+    };
+  }
+
+  return {
+    blocked:false,
+    warning:false,
+    title:"Confirm Payment Acceptance",
+    message:"All blocking validations passed. Confirm to create the Payment Details entry and lock this reconciliation.",
+    details:common.concat([["Remaining After",money(Math.max(0,round2(remainingBefore-imported))) ]])
+  };
+}
+
 async function acceptTallyFromReview(){
   const id=STATE.tallyReviewRowId;
   if(!id) return;
+  const r=STATE.tallyRows.find(x=>x.id===String(id));
+  if(!r){toast("Tally reconciliation row was not found.","error");return}
+
+  const check=buildTallyAcceptCheck(r);
+
+  if(check.blocked){
+    await showTallyAcceptPopup({
+      type:"blocked",
+      title:check.title,
+      message:check.message,
+      details:check.details,
+      showCancel:false,
+      confirmText:"OK"
+    });
+    return;
+  }
+
+  const confirmed=await showTallyAcceptPopup({
+    type:check.warning?"warning":"confirm",
+    title:check.title,
+    message:check.message,
+    details:check.details,
+    confirmText:check.warning?"Continue & Accept":"Accept Payment",
+    cancelText:"Cancel"
+  });
+  if(!confirmed) return;
+
   const btn=document.getElementById("tallyReviewAcceptBtn");
   if(btn) btn.disabled=true;
   try{
