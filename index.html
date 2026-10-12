@@ -3502,7 +3502,24 @@ const CONFIG = {
     eligible: "Eligible_Payment",
     date: "Payment_Request_Date",
     type: "Payment_Type",
-    status: "Payment_Request_Status"
+    status: "Payment_Request_Status",
+    vendor: "Vendor_Name",
+    project: "Project_Code"
+  },
+
+  /* Payments synced from Tally (same report the Tally Live tab uses). */
+  tallyReport: "Match_Invoce_Report",
+  tallyFields: {
+    po: "PO_Number",
+    amount: "Imported_Amount",
+    vendor: "Vendor_Name_Import",
+    project: "Project_Code_Import",
+    company: "Tally_Company",
+    voucher: "Tally_Voucher_Number",
+    date: "Payment_Record_Date_Import",
+    utr: "UTR_No_Import",
+    txn: "Transaction_ID_Import",
+    status: "Match_Status"
   },
   // Requisitions with these statuses are ignored (case-insensitive).
   ignoreRequisitionStatuses: ["rejected","cancelled","canceled"],
@@ -3539,11 +3556,12 @@ const CONFIG = {
 /* ============================== STATE ===================================== */
 const STATE = {
   ready:false, error:null, warnings:[],
-  poRaw:[], prRaw:[], pdRaw:[], grnRaw:[],
+  poRaw:[], prRaw:[], pdRaw:[], grnRaw:[], tallyRaw:[],
+  tallyStatus:"all",  // status chip of the Tally vs Requisition report
   keys:{},            // detected PO field names
   model:null,         // built aggregation
   filtered:null,      // after filters
-  active:"awaiting",
+  active:"tallyReq",
   sort:{},            // per report {col,dir}
   expanded:{}         // per report set of row ids
 };
@@ -3700,6 +3718,12 @@ async function loadAll(){
   STATE.prRaw=await getAllRecords(CONFIG.requisitionReport,"Loading Payment Requisitions");
   STATE.pdRaw=await getAllRecords(CONFIG.paymentReport,"Loading Payment Details");
   STATE.grnRaw=CONFIG.grn.report ? await getAllRecords(CONFIG.grn.report,"Loading GRN records") : [];
+  try{
+    STATE.tallyRaw=await getAllRecords(CONFIG.tallyReport,"Loading Tally payments");
+  }catch(err){
+    STATE.tallyRaw=[];
+    STATE.warnings.push("Tally payments could not be loaded from "+CONFIG.tallyReport+": "+(err.message||err));
+  }
 }
 
 function unionKeys(rows,limit){
@@ -3816,7 +3840,58 @@ function buildModel(){
     po.lastPayment=po.pays.reduce((d,p)=>(p.date&&(!d||p.date>d))?p.date:d,null);
   });
 
-  STATE.model={pos,orphanPR,orphanPD,tol};
+  /* ---- Tally vs Requisition: match by PO number only ----
+     Key = PO number with everything except letters/digits removed and upper-cased,
+     so "13-1176", "13 1176" and "13/1176" are treated as the same PO. */
+  const core=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+  const TF=CONFIG.tallyFields, RF=CONFIG.requisitionFields, tmap=new Map();
+  let tallyNoPO=0;
+  const slot=(k,no)=>{
+    if(!tmap.has(k)) tmap.set(k,{key:k,no:no,vendor:"",project:"",tally:[],reqs:[],tallyTotal:0,reqTotal:0,tVendor:"",tProject:"",rVendor:"",rProject:""});
+    const r=tmap.get(k); if(!r.no) r.no=no; return r;
+  };
+  STATE.tallyRaw.forEach(d=>{
+    const no=valueText(d[TF.po],["PO_Number","PO_No"]).trim(), k=core(no);
+    if(!k){ tallyNoPO++; return; }
+    const r=slot(k,no), amt=cleanAmount(d[TF.amount]);
+    r.tally.push({
+      id:String(d.ID||""), amount:amt,
+      company:valueText(d[TF.company]), voucher:valueText(d[TF.voucher]),
+      date:parseDate(d[TF.date]), utr:valueText(d[TF.utr]), txn:valueText(d[TF.txn]),
+      status:valueText(d[TF.status]).trim()
+    });
+    r.tallyTotal+=amt;
+    if(!r.tVendor) r.tVendor=valueText(d[TF.vendor],["Vendor_Display_Name","Vendor_Name"]);
+    if(!r.tProject) r.tProject=valueText(d[TF.project],["Project_Code"]);
+  });
+  STATE.prRaw.forEach(rec=>{
+    const status=valueText(rec[R.status]).trim();
+    if(ignore.includes(status.toLowerCase())) return;
+    const no=valueText(rec[R.po],["PO_Number","PO_No"]).trim(), k=core(no);
+    if(!k) return;
+    const r=slot(k,no), el=cleanAmount(rec[R.eligible]);
+    r.no=no;   // show the PO number exactly as written in the requisition
+    r.reqs.push({id:String(rec.ID||""),date:parseDate(rec[R.date]),type:valueText(rec[R.type]),status:status,eligible:el});
+    r.reqTotal+=el;
+    if(!r.rVendor) r.rVendor=valueText(rec[RF.vendor],["Vendor_Display_Name","Vendor_Name"]);
+    if(!r.rProject) r.rProject=valueText(rec[RF.project],["Project_Code"]);
+  });
+  const tallyRows=[];
+  tmap.forEach(r=>{
+    if(!r.tally.length && !r.reqs.length) return;
+    r.tallyTotal=round2(r.tallyTotal); r.reqTotal=round2(r.reqTotal);
+    r.diff=round2(r.tallyTotal-r.reqTotal);        // Tally paid minus Requisition
+    r.vendor=r.rVendor||r.tVendor||"(No vendor)";
+    r.project=r.rProject||r.tProject||"(No project)";
+    if(!r.reqs.length) r.st="noreq";
+    else if(!r.tally.length) r.st="notally";
+    else if(Math.abs(r.diff)<=tol) r.st="equal";
+    else r.st=r.diff>0?"more":"less";
+    tallyRows.push(r);
+  });
+  tallyRows.sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff)||a.no.localeCompare(b.no));
+
+  STATE.model={pos,orphanPR,orphanPD,tol,tallyRows,tallyNoPO};
 }
 
 /* ============================ FILTERS + REPORTS =========================== */
@@ -3872,6 +3947,15 @@ function computeReports(pos){
   R.vendor=groupBy(pos,"vendor");
   R.project=groupBy(pos,"project");
   return R;
+}
+function filterTallyRows(f){
+  return STATE.model.tallyRows.filter(r=>{
+    if(f.project && r.project!==f.project) return false;
+    if(f.vendor && r.vendor!==f.vendor) return false;
+    if(!f.q) return true;
+    const hay=[r.no,r.vendor,r.project].concat(r.tally.map(t=>t.utr+" "+t.txn+" "+t.voucher)).join(" ").toUpperCase();
+    return hay.includes(f.q);
+  });
 }
 function refreshFilterOptions(){
   const pos=STATE.model.pos;
@@ -4026,6 +4110,53 @@ const REPORTS={
       {h:"GRN Status",f:p=>pillHtml("amber",p.grn.text||"Pending"),v:p=>p.grn.text||"Pending"}
     ]
   },
+  tallyReq:{
+    label:"Tally vs Requisition", tone:"",
+    rule:"Matched by PO number only. 'Paid in Tally' is the total of Tally payment entries for that PO; 'Requisition' is the total Eligible Payment of its (non-rejected) payment requisitions. Difference = Paid in Tally minus Requisition. Click a row to see every Tally entry and requisition.",
+    rows:()=>STATE.filtered.tallyReq.filter(r=>{
+      const s=STATE.tallyStatus;
+      return s==="all" || (s==="diff"?(r.st==="more"||r.st==="less"):r.st===s);
+    }),
+    rid:r=>r.key,
+    detail:r=>{
+      let h=`<div class="main" style="margin-bottom:6px">Payment done in Tally for ${htmlEscape(r.no)}</div>`;
+      if(r.tally.length){
+        h+=`<table class="detail-table"><thead><tr><th>Date</th><th>Company</th><th>Voucher</th><th>UTR / Txn</th><th>Reconciliation status</th><th class="num">Paid in Tally</th></tr></thead><tbody>`;
+        r.tally.slice().sort((a,b)=>(a.date?a.date.getTime():0)-(b.date?b.date.getTime():0)).forEach(t=>{
+          h+=`<tr><td>${fmtDate(t.date)}</td><td>${htmlEscape(t.company||"—")}</td><td>${htmlEscape(t.voucher||"—")}</td><td>${htmlEscape([t.utr,t.txn].filter(Boolean).join(" / ")||"—")}</td><td>${htmlEscape(t.status||"—")}</td><td class="num money">${money(t.amount)}</td></tr>`;
+        });
+        h+=`</tbody></table>`;
+      }else h+=`<div class="sub">No Tally payment found for this PO.</div>`;
+      h+=`<div class="main" style="margin:12px 0 6px">What is in the Payment Requisition</div>`;
+      if(r.reqs.length){
+        h+=`<table class="detail-table"><thead><tr><th>Request date</th><th>Type</th><th>Status</th><th class="num">Eligible payment</th></tr></thead><tbody>`;
+        r.reqs.forEach(q=>{
+          h+=`<tr><td>${fmtDate(q.date)}</td><td>${htmlEscape(q.type||"—")}</td><td>${htmlEscape(q.status||"—")}</td><td class="num money">${money(q.eligible)}</td></tr>`;
+        });
+        h+=`</tbody></table>`;
+      }else h+=`<div class="sub">No payment requisition found for this PO.</div>`;
+      return h;
+    },
+    amt:rows=>rows.reduce((s,r)=>s+Math.abs(r.diff),0),
+    cols:[
+      {h:"PO No",f:r=>`<div class="main">${htmlEscape(r.no)}</div>`,v:r=>r.no},
+      {h:"Vendor",f:r=>`<div class="main">${htmlEscape(r.vendor)}</div>`,v:r=>r.vendor},
+      {h:"Project",f:r=>htmlEscape(r.project),v:r=>r.project},
+      {h:"Tally entries",num:1,sum:1,f:r=>r.tally.length,v:r=>r.tally.length},
+      {h:"Paid in Tally",num:1,sum:1,f:r=>`<span class="money">${money(r.tallyTotal)}</span>`,v:r=>r.tallyTotal},
+      {h:"Requisitions",num:1,sum:1,f:r=>r.reqs.length,v:r=>r.reqs.length},
+      {h:"Requisition (Eligible Payment)",num:1,sum:1,f:r=>`<span class="money">${money(r.reqTotal)}</span>`,v:r=>r.reqTotal},
+      {h:"Difference (Tally − Requisition)",num:1,sum:1,
+        f:r=>{
+          if(Math.abs(r.diff)<=STATE.model.tol) return `<span class="money" style="color:var(--green)">${money(0)}</span>`;
+          return `<span class="money" style="color:${r.diff>0?"var(--red)":"var(--amber)"}">${r.diff>0?"+":"−"} ${money(Math.abs(r.diff))}</span>`;
+        },v:r=>r.diff,c:r=>r.diff},
+      {h:"Status",f:r=>{
+        const m={equal:["green","Equal"],more:["red","Tally paid more"],less:["amber","Tally paid less"],noreq:["gray","No requisition"],notally:["gray","Not paid in Tally"]}[r.st];
+        return pillHtml(m[0],m[1]);
+      },v:r=>({equal:"Equal",more:"Tally paid more",less:"Tally paid less",noreq:"No requisition",notally:"Not paid in Tally"})[r.st]}
+    ]
+  },
   vendor:groupDef("Vendor-wise Summary","vendor","Vendor","Totals for every vendor: PO value, requisitions raised, amount paid, balance, excess, and open follow-ups. Click a row to list its POs."),
   project:groupDef("Project-wise Summary","project","Project","Totals for every project code: PO value, requisitions raised, amount paid, balance, excess, and open follow-ups. Click a row to list its POs.")
 };
@@ -4061,7 +4192,7 @@ function groupDef(label,key,colName,rule){
 }
 
 const TILE_KEYS=["awaiting","notRecorded","pending","excess","done","grn"];
-const TAB_KEYS=["vendor","project"];
+const TAB_KEYS=["tallyReq","vendor","project"];
 
 /* ============================ RENDERING =================================== */
 function onFilterChange(){ render(); }
@@ -4071,12 +4202,14 @@ function clearFilters(){
   document.getElementById("rpVendor").value="";
   render();
 }
+function setTallyStatus(s){ STATE.tallyStatus=s; renderTabs(); renderReport(); }
 function setActive(key){ STATE.active=key; renderTiles(); renderTabs(); renderReport(); }
 
 function render(){
   if(!STATE.model) return;
   const f=currentFilters();
   STATE.filtered=computeReports(STATE.model.pos.filter(p=>poMatchesFilters(p,f)));
+  STATE.filtered.tallyReq=filterTallyRows(f);
   renderTiles(); renderTabs(); renderReport();
 }
 function renderTiles(){
@@ -4122,6 +4255,13 @@ function renderReport(){
   document.getElementById("rpCount").textContent=rows.length.toLocaleString("en-IN")+" row(s)";
 
   let notice="";
+  if(key==="tallyReq"){
+    const all=STATE.filtered.tallyReq, n=s=>all.filter(r=>s==="all"?true:(s==="diff"?(r.st==="more"||r.st==="less"):r.st===s)).length;
+    const chips=[["all","All"],["diff","Has difference"],["equal","Equal"],["noreq","No requisition"],["notally","Not paid in Tally"]];
+    notice+=`<div class="tabs2" style="margin:12px 16px 0">`+chips.map(c=>`<button class="tab2 ${STATE.tallyStatus===c[0]?"active":""}" onclick="RP.setTallyStatus('${c[0]}')">${c[1]} (${n(c[0])})</button>`).join("")+`</div>`;
+    if(!STATE.tallyRaw.length) notice+=`<div class="notice">No Tally payments were loaded from <b>${htmlEscape(CONFIG.tallyReport)}</b>. If the report name is right, there is simply nothing synced yet; otherwise check Diagnostics.</div>`;
+    if(STATE.model.tallyNoPO) notice+=`<div class="notice">${STATE.model.tallyNoPO} Tally entr${STATE.model.tallyNoPO===1?"y has":"ies have"} no PO number and cannot be matched.</div>`;
+  }
   if(key==="grn" && !STATE.model.pos.some(p=>p.grn.known)){
     notice=`<div class="notice"><b>GRN source not found.</b> No GRN status field was detected on the Purchase Order report and no GRN report is configured. Open Diagnostics to see the PO field names, then set <code>CONFIG.poFields.grn</code> or <code>CONFIG.grn.report</code>.</div>`;
   }
@@ -4151,7 +4291,7 @@ function renderReport(){
       if(i===0) return `<td>Total</td>`;
       if(!c.sum) return `<td></td>`;
       const t=rows.reduce((a,r)=>a+Number(c.v(r)||0),0);
-      const isMoney=!/^(POs|Payments|Awaiting request|Pending payments|Not recorded)$/.test(c.h);
+      const isMoney=!/^(POs|Payments|Awaiting request|Pending payments|Not recorded|Tally entries|Requisitions)$/.test(c.h);
       return `<td class="num">${isMoney?money(t):t.toLocaleString("en-IN")}</td>`;
     }).join("")+`</tr>`;
   }
@@ -4201,6 +4341,7 @@ function runDiagnostics(){
       Purchase Orders: <b>${STATE.poRaw.length.toLocaleString("en-IN")}</b> (${htmlEscape(CONFIG.poReport)})<br>
       Payment Requisitions: <b>${STATE.prRaw.length.toLocaleString("en-IN")}</b> (${htmlEscape(CONFIG.requisitionReport)})<br>
       Payment Details: <b>${STATE.pdRaw.length.toLocaleString("en-IN")}</b> (${htmlEscape(CONFIG.paymentReport)})<br>
+      Tally payments: <b>${STATE.tallyRaw.length.toLocaleString("en-IN")}</b> (${htmlEscape(CONFIG.tallyReport)})<br>
       ${CONFIG.grn.report?`GRN records: <b>${STATE.grnRaw.length.toLocaleString("en-IN")}</b> (${htmlEscape(CONFIG.grn.report)})<br>`:""}
       ${M?`Unlinked requisitions: <b>${M.orphanPR}</b> · Unlinked payments: <b>${M.orphanPD}</b>`:""}
       ${STATE.warnings.length?`<br><b>Warnings:</b><br>${STATE.warnings.map(htmlEscape).join("<br>")}`:""}
@@ -4213,7 +4354,9 @@ function runDiagnostics(){
     <div class="card-title" style="margin:14px 0 6px">Payment Requisition report: all field names</div>
     ${sampleTable(STATE.prRaw,Object.values(R))}
     <div class="card-title" style="margin:14px 0 6px">Payment Details report: all field names</div>
-    ${sampleTable(STATE.pdRaw,Object.values(P))}`;
+    ${sampleTable(STATE.pdRaw,Object.values(P))}
+    <div class="card-title" style="margin:14px 0 6px">Tally payments report: all field names</div>
+    ${sampleTable(STATE.tallyRaw,Object.values(CONFIG.tallyFields))}`;
 }
 
 /* ============================== STARTUP =================================== */
@@ -4244,7 +4387,7 @@ async function refreshData(){
 function onShow(){
   if(!STATE.ready && !STATE.loading) refreshData();
 }
-window.RP={onShow,refreshData,setActive,sortBy,toggleRow,onFilterChange,clearFilters,exportCurrent,openDiagnostics,closeDiagnostics};
+window.RP={onShow,refreshData,setActive,setTallyStatus,sortBy,toggleRow,onFilterChange,clearFilters,exportCurrent,openDiagnostics,closeDiagnostics};
 
 })();
 </script>
