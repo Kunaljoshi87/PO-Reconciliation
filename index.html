@@ -3,3367 +3,894 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Payment Reconciliation Center</title>
-
-<!-- Zoho Creator Widget SDK V2 -->
+<title>PO Payment Reports</title>
 <script src="https://static.zohocdn.com/creator/widgets/version/2.0/widgetsdk-min.js"></script>
-
-<!-- Excel / CSV reader -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
 <style>
-:root{
-  --bg:#f5f7fb;
-  --surface:#ffffff;
-  --surface2:#f9fafc;
-  --border:#e4e8f0;
-  --ink:#172033;
-  --muted:#667085;
-  --brand:#c92f78;
-  --brand2:#8f2459;
-  --brandSoft:#fbe7f1;
-  --blue:#2563eb;
-  --blueSoft:#eaf1ff;
-  --green:#168454;
-  --greenSoft:#e6f6ee;
-  --amber:#b56a0b;
-  --amberSoft:#fff4dd;
-  --red:#c83d45;
-  --redSoft:#fdebec;
-  --gray:#6b7280;
-  --graySoft:#eef0f4;
-  --shadow:0 14px 34px rgba(24,32,51,.08);
-}
+:root{--bg:#f5f7fb;--surface:#fff;--surface2:#f9fafc;--border:#e4e8f0;--ink:#172033;--muted:#667085;
+--brand:#c92f78;--brand2:#8f2459;--brandSoft:#fbe7f1;--blue:#2563eb;--blueSoft:#eaf1ff;
+--green:#168454;--greenSoft:#e6f6ee;--amber:#b56a0b;--amberSoft:#fff4dd;--red:#c83d45;--redSoft:#fdebec;
+--gray:#6b7280;--graySoft:#eef0f4;--shadow:0 14px 34px rgba(24,32,51,.08)}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
-button,input{font:inherit}
+button,input,select{font:inherit}
 button{cursor:pointer}
 .hidden{display:none!important}
-
-.shell{max-width:1500px;margin:0 auto;padding:20px}
-.topbar{
-  display:flex;justify-content:space-between;align-items:flex-start;gap:18px;
-  background:linear-gradient(135deg,#fff 0%,#fff8fc 100%);
-  border:1px solid var(--border);border-radius:20px;padding:20px 22px;box-shadow:var(--shadow)
-}
-.title-wrap{display:flex;gap:14px;align-items:flex-start}
-.logo{
-  width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--brand),#e6589b);
-  display:grid;place-items:center;color:#fff;font-weight:900;box-shadow:0 10px 25px rgba(201,47,120,.25)
-}
-h1{font-size:22px;margin:0 0 5px}
-.subtitle{font-size:13.5px;color:var(--muted);max-width:760px;line-height:1.55}
-.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-.connection{
-  display:flex;align-items:center;gap:8px;border:1px solid var(--border);background:#fff;
-  border-radius:999px;padding:8px 12px;font-size:12.5px;color:var(--muted)
-}
-.dot{width:9px;height:9px;border-radius:50%;background:#b7bdc8}
-.dot.ok{background:var(--green)}
-.dot.bad{background:var(--red)}
-.btn{
-  border:1px solid var(--border);background:#fff;color:var(--ink);border-radius:10px;
-  padding:9px 13px;font-weight:700;font-size:13px
-}
-.btn:hover{background:#faf7f9}
-.btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
-.btn.primary:hover{background:var(--brand2)}
-.btn.danger{background:#fff;color:var(--red);border-color:#f0c7ca}
-.btn.small{padding:7px 10px;font-size:12px}
-.btn:disabled{opacity:.48;cursor:not-allowed}
-
-.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-top:16px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:0 8px 24px rgba(24,32,51,.04)}
-.upload-card{padding:20px}
-.section-title{font-size:14px;font-weight:800;margin:0 0 4px}
-.section-sub{font-size:12.5px;color:var(--muted);margin:0 0 14px}
-
-.dropzone{
-  border:1.5px dashed #d5a1bc;border-radius:16px;background:#fffafd;padding:24px;
-  display:flex;gap:16px;align-items:center;justify-content:center;text-align:center;transition:.18s
-}
-.dropzone.drag{border-color:var(--brand);background:var(--brandSoft)}
-.drop-icon{width:46px;height:46px;border-radius:14px;background:var(--brandSoft);color:var(--brand);display:grid;place-items:center;font-size:23px}
-.drop-main{font-size:14px;font-weight:800}
-.drop-sub{font-size:12px;color:var(--muted);margin-top:4px}
-.file-meta{
-  margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;
-  padding:11px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px
-}
-.file-name{font-weight:800;font-size:13px}
-.file-info{font-size:12px;color:var(--muted);margin-top:2px}
-
-.progress-wrap{margin-top:13px}
-.progress-line{height:8px;background:#edf0f5;border-radius:999px;overflow:hidden}
-.progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--brand),#ef69a7);transition:.2s}
-.progress-text{font-size:12px;color:var(--muted);margin-top:6px}
-
-.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
-.stat{padding:16px;border-radius:16px;border:1px solid var(--border);background:#fff}
-.stat .label{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
-.stat .value{font-size:26px;font-weight:900;margin-top:6px}
-.stat .hint{font-size:11.5px;color:var(--muted);margin-top:3px}
-.stat.total{background:#fff}
-.stat.match{background:var(--greenSoft);border-color:#c7ead8}
-.stat.suggest{background:var(--amberSoft);border-color:#f0dbad}
-.stat.mismatch{background:var(--redSoft);border-color:#f0c7ca}
-.stat.notfound{background:var(--graySoft);border-color:#dfe3e9}
-
-.results-card{overflow:hidden}
-.toolbar{
-  padding:14px 16px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap
-}
-.toolbar-left,.toolbar-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.searchbox{
-  min-width:270px;border:1px solid var(--border);background:#fff;border-radius:10px;
-  padding:9px 11px;outline:none
-}
-.searchbox:focus{border-color:#d781ad;box-shadow:0 0 0 3px #fae9f2}
-.chips{display:flex;gap:6px;flex-wrap:wrap}
-.chip{
-  border:1px solid var(--border);background:#fff;border-radius:999px;padding:7px 10px;
-  font-size:12px;font-weight:800;color:var(--muted)
-}
-.chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
-
-.table-wrap{overflow:auto;max-height:620px}
-table{width:100%;border-collapse:separate;border-spacing:0;min-width:1180px}
-th{
-  position:sticky;top:0;z-index:2;background:#fafbfc;border-bottom:1px solid var(--border);
-  color:#667085;font-size:11px;text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:11px 10px
-}
-td{border-bottom:1px solid #edf0f4;padding:11px 10px;font-size:12.5px;vertical-align:middle}
+.shell{max-width:1500px;margin:0 auto;padding:18px}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:linear-gradient(135deg,#fff 0%,#fff8fc 100%);border:1px solid var(--border);border-radius:18px;padding:18px 20px;box-shadow:var(--shadow);flex-wrap:wrap}
+.title-wrap{display:flex;gap:13px;align-items:flex-start}
+.logo{width:44px;height:44px;border-radius:13px;background:linear-gradient(135deg,var(--brand),#e6589b);display:grid;place-items:center;color:#fff;font-weight:900}
+h1{font-size:20px;margin:0 0 4px}
+.subtitle{font-size:13px;color:var(--muted);max-width:760px;line-height:1.55}
+.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.connection{display:flex;align-items:center;gap:8px;border:1px solid var(--border);background:#fff;border-radius:999px;padding:8px 12px;font-size:12.5px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;background:#b7bdc8}.dot.ok{background:var(--green)}.dot.bad{background:var(--red)}
+.btn{border:1px solid var(--border);background:#fff;color:var(--ink);border-radius:10px;padding:9px 13px;font-weight:700;font-size:13px}
+.btn:hover{background:#faf7f9}.btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}.btn.primary:hover{background:var(--brand2)}
+.btn.small{padding:6px 9px;font-size:12px}.btn:disabled{opacity:.5;cursor:not-allowed}
+.filters{margin-top:14px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.filters input,.filters select{border:1px solid var(--border);background:#fff;border-radius:10px;padding:9px 10px;outline:none;min-width:170px}
+.filters input:focus,.filters select:focus{border-color:#d781ad;box-shadow:0 0 0 3px #fae9f2}
+.filters .grow{flex:1;min-width:220px}
+.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:14px}
+.tile{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:12px 13px;text-align:left;transition:.15s}
+.tile:hover{border-color:#e0a4c2}
+.tile.active{border-color:var(--brand);background:#fff8fc;box-shadow:0 8px 20px rgba(201,47,120,.10)}
+.tile .l{font-size:11px;font-weight:800;color:var(--muted);line-height:1.35;min-height:30px}
+.tile .n{font-size:26px;font-weight:900;margin-top:4px}
+.tile .a{font-size:11.5px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.tile.warn .n{color:var(--amber)}.tile.bad .n{color:var(--red)}.tile.good .n{color:var(--green)}
+.tabs2{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.tab2{border:1px solid var(--border);background:#fff;border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:800;color:var(--muted)}
+.tab2.active{background:var(--ink);border-color:var(--ink);color:#fff}
+.card{margin-top:12px;background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 8px 24px rgba(24,32,51,.04)}
+.card-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.card-title{font-size:15px;font-weight:900}
+.card-rule{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.55;max-width:900px}
+.table-wrap{overflow:auto;max-height:640px}
+table{width:100%;border-collapse:separate;border-spacing:0;min-width:980px}
+th{position:sticky;top:0;z-index:2;background:#fafbfc;border-bottom:1px solid var(--border);color:#667085;font-size:11px;text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:10px 10px;white-space:nowrap;user-select:none}
+th.sortable{cursor:pointer}th.sortable:hover{color:var(--brand)}
+th.num,td.num{text-align:right}
+td{border-bottom:1px solid #edf0f4;padding:10px;font-size:12.5px;vertical-align:middle}
 tr.data-row:hover{background:#fffafd}
-.cell-main{font-weight:800}
-.cell-sub{font-size:11.5px;color:var(--muted);margin-top:2px;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+tr.data-row.clickable{cursor:pointer}
+tr.totals td{background:#fafbfc;font-weight:900;border-top:2px solid var(--border)}
+.main{font-weight:800}.sub{font-size:11.5px;color:var(--muted);margin-top:2px}
 .money{font-variant-numeric:tabular-nums;font-weight:800}
-.score{font-weight:900}
-.status{
-  display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:11.5px;font-weight:900;white-space:nowrap
-}
-.status.matched{background:var(--greenSoft);color:var(--green)}
-.status.suggested{background:var(--amberSoft);color:var(--amber)}
-.status.mismatch{background:var(--redSoft);color:var(--red)}
-.status.not-found{background:var(--graySoft);color:var(--gray)}
-.status.accepted{background:var(--blueSoft);color:var(--blue)}
-.status.config-error{background:#f4e8ff;color:#7838a3}
-
-.check{width:17px;height:17px;accent-color:var(--brand)}
-.link-btn{border:0;background:transparent;color:var(--brand);font-weight:800;padding:4px 0}
-.empty{padding:42px 20px;text-align:center;color:var(--muted)}
-.empty strong{display:block;color:var(--ink);margin-bottom:5px}
-
-.drawer-backdrop{
-  position:fixed;inset:0;background:rgba(19,25,39,.22);z-index:50;opacity:0;pointer-events:none;transition:.18s
-}
-.drawer-backdrop.open{opacity:1;pointer-events:auto}
-.drawer{
-  position:fixed;right:0;top:0;height:100vh;width:min(620px,96vw);background:#fff;z-index:60;
-  transform:translateX(102%);transition:.22s;box-shadow:-20px 0 50px rgba(15,23,42,.15);display:flex;flex-direction:column
-}
-.drawer.open{transform:translateX(0)}
-.drawer-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-.drawer-title{font-weight:900;font-size:17px}
-.drawer-sub{font-size:12px;color:var(--muted);margin-top:4px}
-.drawer-body{padding:18px 20px;overflow:auto;flex:1}
-.drawer-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;background:#fff}
-
-.compare{
-  display:grid;grid-template-columns:140px 1fr 1fr 34px;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:12px
-}
-.compare>div{padding:9px 10px;border-bottom:1px solid #edf0f4;font-size:12px}
-.compare>div:nth-last-child(-n+4){border-bottom:0}
-.compare .hdr{font-weight:900;background:#fafbfc;color:#667085}
-.compare .field{font-weight:800;background:#fafbfc}
-.compare .yes{color:var(--green);font-weight:900;text-align:center}
-.compare .near{color:var(--amber);font-weight:900;text-align:center}
-.compare .no{color:var(--red);font-weight:900;text-align:center}
-
-.reason{
-  margin-top:14px;padding:12px 13px;border-radius:12px;background:#fafbfc;border:1px solid var(--border);
-  font-size:12.5px;line-height:1.6;color:#475467
-}
-.reason b{color:var(--ink)}
-
-.candidate-head{display:flex;justify-content:space-between;align-items:center;margin-top:18px;margin-bottom:8px}
-.candidate-title{font-size:13px;font-weight:900}
-.candidate{
-  border:1px solid var(--border);border-radius:13px;padding:11px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start
-}
-.candidate.selected{border-color:#dc8db7;background:#fff8fc}
-.candidate input{margin-top:4px;accent-color:var(--brand)}
-.candidate-main{flex:1;min-width:0}
-.candidate-top{display:flex;justify-content:space-between;gap:8px}
-.candidate-po{font-weight:900;font-size:12.5px}
-.candidate-score{font-weight:900;color:var(--brand);white-space:nowrap}
-.candidate-meta{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.45}
-.candidate-amount{font-size:12px;font-weight:900;margin-top:5px}
-.manual-search{display:flex;gap:7px;margin:10px 0}
-.manual-search input{flex:1;border:1px solid var(--border);border-radius:10px;padding:9px 10px;outline:none}
-
+.pill{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:900;white-space:nowrap}
+.pill.green{background:var(--greenSoft);color:var(--green)}.pill.amber{background:var(--amberSoft);color:var(--amber)}
+.pill.red{background:var(--redSoft);color:var(--red)}.pill.gray{background:var(--graySoft);color:var(--gray)}.pill.blue{background:var(--blueSoft);color:var(--blue)}
+.bar{height:7px;background:#edf0f5;border-radius:999px;overflow:hidden;min-width:70px}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),#ef69a7)}
+.bar.over>i{background:var(--red)}
+tr.detail td{background:#fbfcfe;padding:12px 16px}
+.detail-table{min-width:0;width:100%;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.detail-table th{position:static;background:#f4f6fa}
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}.empty strong{display:block;color:var(--ink);margin-bottom:5px}
+.notice{margin:12px 16px 0;padding:10px 12px;border-radius:11px;background:var(--amberSoft);border:1px solid #f0dbad;color:#7a4b08;font-size:12px;line-height:1.55}
+.modal-backdrop{position:fixed;inset:0;background:rgba(19,25,39,.28);z-index:70;display:grid;place-items:center;padding:20px}
+.modal{background:#fff;width:min(900px,96vw);max-height:88vh;overflow:auto;border-radius:18px;box-shadow:var(--shadow)}
+.modal-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:16px 18px}
+.reason{padding:11px 13px;border-radius:12px;background:#fafbfc;border:1px solid var(--border);font-size:12.5px;line-height:1.65;color:#475467;margin-bottom:12px}
 .toast-wrap{position:fixed;right:18px;bottom:18px;z-index:100;display:flex;flex-direction:column;gap:8px}
 .toast{background:#172033;color:#fff;padding:11px 14px;border-radius:11px;box-shadow:var(--shadow);font-size:12.5px;max-width:390px}
-.toast.success{background:#116c46}
-.toast.error{background:#a52e35}
-
-.modal-backdrop{position:fixed;inset:0;background:rgba(19,25,39,.28);z-index:70;display:grid;place-items:center;padding:20px}
-.modal{background:#fff;width:min(860px,96vw);max-height:88vh;overflow:auto;border-radius:18px;box-shadow:var(--shadow)}
-.modal-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-.modal-body{padding:16px 18px}
-pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;padding:12px;border-radius:12px;font-size:11px}
-
-@media(max-width:900px){
-  .stats{grid-template-columns:repeat(2,1fr)}
-  .topbar{flex-direction:column}
-  .top-actions{justify-content:flex-start}
-}
-@media(max-width:560px){
-  .shell{padding:10px}
-  .stats{grid-template-columns:1fr 1fr}
-  .searchbox{min-width:200px}
-}
-
-/* ======================= SOURCE MODE + TALLY LIVE ======================== */
-.mode-card{
-  margin-top:16px;background:#fff;border:1px solid var(--border);border-radius:16px;
-  box-shadow:0 8px 24px rgba(24,32,51,.04);padding:12px 14px;display:flex;
-  align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap
-}
-.mode-title{font-size:12px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.mode-actions{display:flex;gap:8px;flex-wrap:wrap}
-.mode-btn{
-  border:1px solid var(--border);background:#fff;color:var(--ink);border-radius:10px;
-  padding:9px 14px;font-weight:800;font-size:12.5px
-}
-.mode-btn.active{background:var(--brand);border-color:var(--brand);color:#fff}
-.tally-live{margin-top:16px}
-.tally-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
-.tally-filter-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.tally-filter-row select,.tally-filter-row input{border:1px solid var(--border);background:#fff;border-radius:10px;padding:9px 10px;outline:none}
-.tally-filter-row input{min-width:260px}
-.tally-note{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.5}
-.tally-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);background:#fafbfc}
-.tally-stat{border:1px solid var(--border);background:#fff;border-radius:12px;padding:11px 12px}
-.tally-stat .n{font-size:21px;font-weight:900;margin-top:3px}
-.tally-stat .l{font-size:10.5px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.tally-row-busy{opacity:.55;pointer-events:none}
-.tally-select{max-width:320px;width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 8px;background:#fff;font-size:11.5px}
-.tally-actions{display:flex;gap:6px;flex-wrap:wrap}
-.tally-meta{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.4}
-.tally-lock{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;background:var(--graySoft);font-size:10.5px;font-weight:800;color:var(--gray)}
-.tally-selected-card{border:1px solid var(--border);border-radius:10px;padding:8px 9px;background:#fff;min-width:245px}
-.tally-selected-card .po{font-size:12px;font-weight:900;color:var(--ink)}
-.tally-selected-card .meta{font-size:10.8px;color:var(--muted);margin-top:3px;line-height:1.4}
-.tally-selected-card .tag{display:inline-flex;margin-top:5px;padding:3px 6px;border-radius:999px;background:var(--brandSoft);color:var(--brand);font-size:10px;font-weight:900}
-.suggest-context{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:13px}
-.suggest-context .box{border:1px solid var(--border);border-radius:11px;padding:9px 10px;background:#fafbfc}
-.suggest-context .k{font-size:10px;color:var(--muted);font-weight:900;text-transform:uppercase;letter-spacing:.03em}
-.suggest-context .v{font-size:12px;font-weight:900;margin-top:3px;word-break:break-word}
-.suggest-search-row{display:flex;gap:8px;align-items:center;margin:12px 0}
-.suggest-search-row input{flex:1;border:1px solid var(--border);border-radius:10px;padding:10px 11px;outline:none}
-.suggest-list{display:flex;flex-direction:column;gap:8px}
-.suggest-item{border:1px solid var(--border);border-radius:13px;padding:11px 12px;display:grid;grid-template-columns:44px minmax(0,1fr) 110px 92px;gap:10px;align-items:center;background:#fff}
-.suggest-item.selected{border-color:#d781ad;background:#fff8fc}
-.suggest-rank{width:34px;height:34px;border-radius:10px;background:var(--graySoft);display:grid;place-items:center;font-size:12px;font-weight:900;color:var(--gray)}
-.suggest-po{font-size:12.5px;font-weight:900}
-.suggest-meta{font-size:11px;color:var(--muted);line-height:1.45;margin-top:2px}
-.suggest-money{font-size:12px;font-weight:900;text-align:right}
-.suggest-score{font-size:13px;font-weight:900;color:var(--brand);text-align:center}
-
-
-/* Build v13 - spacious Tally review cards + full Payment Details preview */
-.tally-card-list{padding:18px;display:flex;flex-direction:column;gap:16px;background:#f7f8fb}
-.tally-payment-card{background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 8px 22px rgba(24,32,51,.05)}
-.tally-payment-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;background:linear-gradient(135deg,#fff 0%,#fffafd 100%)}
-.tally-payment-title{font-size:15px;font-weight:900;line-height:1.35}
-.tally-payment-sub{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.5}
-.tally-payment-badges{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
-.tally-score-badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:var(--brandSoft);color:var(--brand);font-size:11px;font-weight:900}
-.tally-payment-body{padding:18px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
-.tally-panel{border:1px solid var(--border);border-radius:14px;padding:14px;background:#fff}
-.tally-panel.selected-panel{background:#fffafd;border-color:#edd0df}
-.tally-panel-title{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:11px}
-.tally-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
-.tally-field .k{font-size:10.5px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.035em}
-.tally-field .v{font-size:13px;font-weight:800;margin-top:3px;line-height:1.4;word-break:break-word}
-.tally-field .v.big{font-size:16px}
-.tally-payment-foot{padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#fafbfc}
-.tally-payment-foot-note{font-size:11.5px;color:var(--muted);line-height:1.5}
-.tally-payment-foot-actions{display:flex;gap:8px;flex-wrap:wrap}
-.preview-modal{width:min(1240px,97vw);max-height:92vh}
-.preview-intro{padding:12px 14px;border:1px solid #e8d1dd;background:#fff8fc;border-radius:12px;font-size:12px;line-height:1.6;color:#475467;margin-bottom:16px}
-.preview-section{border:1px solid var(--border);border-radius:15px;background:#fff;margin-bottom:14px;overflow:hidden}
-.preview-section-head{padding:12px 15px;background:#fafbfc;border-bottom:1px solid var(--border);font-size:13px;font-weight:900}
-.preview-grid{padding:14px 15px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 18px}
-.preview-field{min-width:0}
-.preview-field .k{font-size:10.5px;font-weight:850;color:var(--muted);text-transform:uppercase;letter-spacing:.035em}
-.preview-field .v{font-size:13px;font-weight:750;color:var(--ink);margin-top:4px;line-height:1.45;word-break:break-word;min-height:20px}
-.preview-field .v.money-value{font-size:14px;font-weight:900}
-.preview-field .source{font-size:10px;color:#98a2b3;margin-top:2px}
-.preview-warning{padding:11px 13px;border-radius:11px;background:var(--amberSoft);border:1px solid #f0dbad;color:#7a4b08;font-size:11.5px;line-height:1.55;margin:12px 0}
-.preview-ok{padding:11px 13px;border-radius:11px;background:var(--greenSoft);border:1px solid #c7ead8;color:#116c46;font-size:11.5px;line-height:1.55;margin:12px 0}
-.preview-actions{display:flex;gap:9px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
-@media(max-width:1050px){.tally-payment-body{grid-template-columns:1fr}.preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:650px){.tally-fields,.preview-grid{grid-template-columns:1fr}.tally-card-list{padding:10px}.tally-payment-body{padding:12px}.tally-payment-head,.tally-payment-foot{padding:12px}}
-@media(max-width:900px){.tally-stats{grid-template-columns:repeat(2,1fr)}.suggest-context{grid-template-columns:repeat(2,1fr)}.suggest-item{grid-template-columns:38px minmax(0,1fr) 90px}}
-
-/* Build v15 - Accept Payment validation / confirmation popup + confirmed overpayment action */
-.accept-check-backdrop{
-  position:fixed;inset:0;background:rgba(19,25,39,.38);z-index:140;
-  display:grid;place-items:center;padding:20px
-}
-.accept-check-modal{
-  width:min(560px,96vw);background:#fff;border:1px solid var(--border);border-radius:18px;
-  box-shadow:0 24px 70px rgba(15,23,42,.24);overflow:hidden
-}
-.accept-check-head{padding:18px 20px 12px;display:flex;gap:12px;align-items:flex-start}
-.accept-check-icon{
-  width:42px;height:42px;border-radius:13px;display:grid;place-items:center;
-  font-size:21px;font-weight:900;flex:0 0 auto
-}
-.accept-check-modal.confirm .accept-check-icon{background:var(--greenSoft);color:var(--green)}
-.accept-check-modal.warning .accept-check-icon{background:var(--amberSoft);color:var(--amber)}
-.accept-check-modal.blocked .accept-check-icon{background:var(--redSoft);color:var(--red)}
-.accept-check-title{font-size:17px;font-weight:900;line-height:1.3;margin-top:2px}
-.accept-check-message{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:5px}
-.accept-check-body{padding:0 20px 16px}
-.accept-check-details{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fafbfc}
-.accept-check-row{display:grid;grid-template-columns:190px 1fr;gap:10px;padding:9px 11px;border-bottom:1px solid #edf0f4;font-size:12px}
-.accept-check-row:last-child{border-bottom:0}
-.accept-check-row .k{font-weight:800;color:var(--muted)}
-.accept-check-row .v{font-weight:850;color:var(--ink);word-break:break-word}
-.accept-check-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;background:#fff}
-.accept-check-foot .btn.warning-action{background:var(--amber);color:#fff;border-color:var(--amber)}
-.accept-check-foot .btn.warning-action:hover{filter:brightness(.95)}
-@media(max-width:560px){.accept-check-row{grid-template-columns:1fr;gap:3px}}
-
+.toast.success{background:#116c46}.toast.error{background:#a52e35}
+@media(max-width:1100px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.shell{padding:10px}.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.filters input,.filters select{min-width:0;width:100%}}
 </style>
 </head>
-
 <body>
 <div class="shell">
   <section class="topbar">
     <div class="title-wrap">
-      <div class="logo">PR</div>
+      <div class="logo">PO</div>
       <div>
-        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v15</span></h1>
-        <div class="subtitle">
-          Upload an Excel/CSV payment list, compare each row with live Payment Requisition records,
-          review exact and suggested matches, choose an alternate candidate when needed, and update
-          the existing Payment_details2 record only after user confirmation.
-        </div>
+        <h1>PO Payment Reports</h1>
+        <div class="subtitle">Live view of every Purchase Order: which POs have payments done, which are still waiting for a payment request, which payments are not recorded yet, excess payments, and GRN status. Vendor-wise and project-wise summaries included. Read-only: nothing is changed in Creator.</div>
       </div>
     </div>
     <div class="top-actions">
       <div class="connection"><span id="connDot" class="dot"></span><span id="connText">Checking Creator...</span></div>
-      <button class="btn" onclick="refreshCreatorData()">Refresh Creator Data</button>
+      <button class="btn" onclick="refreshData()">Refresh Data</button>
       <button class="btn" onclick="openDiagnostics()">Diagnostics</button>
     </div>
   </section>
 
-  <section class="mode-card">
-    <div>
-      <div class="mode-title">Reconciliation Source</div>
-      <div class="tally-note">Keep the current Excel / CSV process exactly as it is, or review payments already synced from Tally.</div>
-    </div>
-    <div class="mode-actions">
-      <button id="modeFileBtn" class="mode-btn active" onclick="switchReconciliationMode('file')">Excel / CSV Upload</button>
-      <button id="modeTallyBtn" class="mode-btn" onclick="switchReconciliationMode('tally')">Tally Live Payments</button>
-    </div>
+  <section class="filters">
+    <input id="fSearch" class="grow" placeholder="Search PO / vendor / project / UTR..." oninput="onFilterChange()">
+    <select id="fProject" onchange="onFilterChange()"><option value="">All Projects</option></select>
+    <select id="fVendor" onchange="onFilterChange()"><option value="">All Vendors</option></select>
+    <button class="btn" onclick="clearFilters()">Clear</button>
+    <button id="exportBtn" class="btn primary" onclick="exportCurrent()">Export CSV</button>
   </section>
 
-  <div id="fileReconciliationMode">
-  <div class="grid">
-    <section class="card upload-card">
-      <div class="section-title">1. Upload payment file</div>
-      <div class="section-sub">
-        Accepted: .xlsx, .xls, .csv. Required columns: PO No, Vendor Name, Eligible Payment.
-        Project Code is strongly recommended. Nothing is written to Creator until you click Accept Selected / Accept Selected Match.
-      </div>
+  <section id="tiles" class="tiles"></section>
+  <div id="tabs2" class="tabs2"></div>
 
-      <div id="dropzone" class="dropzone">
-        <div class="drop-icon">↑</div>
-        <div>
-          <div class="drop-main">Drop Excel / CSV here</div>
-          <div class="drop-sub">or choose a file from your computer</div>
-          <div style="margin-top:10px">
-            <button class="btn primary" onclick="document.getElementById('fileInput').click()">Browse File</button>
-            <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" class="hidden">
-          </div>
-        </div>
-      </div>
-
-      <div id="fileMeta" class="file-meta hidden">
-        <div>
-          <div id="fileName" class="file-name"></div>
-          <div id="fileInfo" class="file-info"></div>
-        </div>
-        <div style="display:flex;gap:7px">
-          <button id="processBtn" class="btn primary" onclick="processCurrentFile()">Process & Match</button>
-          <button class="btn" onclick="clearFile()">Clear</button>
-        </div>
-      </div>
-
-      <div id="progressWrap" class="progress-wrap hidden">
-        <div class="progress-line"><div id="progressBar" class="progress-bar"></div></div>
-        <div id="progressText" class="progress-text">Preparing...</div>
-      </div>
-    </section>
-
-    <section id="statsSection" class="stats hidden">
-      <div class="stat total"><div class="label">Total rows</div><div id="sTotal" class="value">0</div><div class="hint">Detected in file</div></div>
-      <div class="stat match"><div class="label">Matched</div><div id="sMatched" class="value">0</div><div class="hint">Exact match</div></div>
-      <div class="stat suggest"><div class="label">Suggested</div><div id="sSuggested" class="value">0</div><div class="hint">Review recommended</div></div>
-      <div class="stat mismatch"><div class="label">Mismatch</div><div id="sMismatch" class="value">0</div><div class="hint">Important differences</div></div>
-      <div class="stat notfound"><div class="label">Not found</div><div id="sNotFound" class="value">0</div><div class="hint">No useful candidate</div></div>
-    </section>
-
-    <section id="resultsCard" class="card results-card hidden">
-      <div class="toolbar">
-        <div class="toolbar-left">
-          <input id="resultSearch" class="searchbox" placeholder="Search PO / Vendor / Project..." oninput="renderTable()">
-          <div class="chips">
-            <button class="chip active" data-filter="all" onclick="setFilter('all',this)">All</button>
-            <button class="chip" data-filter="matched" onclick="setFilter('matched',this)">Matched</button>
-            <button class="chip" data-filter="suggested" onclick="setFilter('suggested',this)">Suggested</button>
-            <button class="chip" data-filter="mismatch" onclick="setFilter('mismatch',this)">Mismatch</button>
-            <button class="chip" data-filter="not-found" onclick="setFilter('not-found',this)">Not Found</button>
-            <button class="chip" data-filter="accepted" onclick="setFilter('accepted',this)">Accepted</button>
-          </div>
-        </div>
-        <div class="toolbar-right">
-          <button class="btn" onclick="selectRecommended()">Select strong matches</button>
-          <button class="btn primary" onclick="acceptSelected()">Accept Selected</button>
-          <button class="btn" onclick="exportResults()">Export CSV</button>
-        </div>
-      </div>
-
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:38px"><input id="selectAllBox" class="check" type="checkbox" onchange="toggleAllVisible(this.checked)"></th>
-              <th>Status</th>
-              <th>Project</th>
-              <th>PO No</th>
-              <th>Vendor</th>
-              <th>File Amount</th>
-              <th>Selected Creator Amount</th>
-              <th>Difference</th>
-              <th>Score</th>
-              <th>Match Source</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="resultBody"></tbody>
-        </table>
-        <div id="emptyResults" class="empty hidden"><strong>No rows for this filter.</strong>Change the filter or search text.</div>
-      </div>
-    </section>
-  </div>
-  </div>
-
-  <section id="tallyReconciliationMode" class="card tally-live hidden">
-    <div class="tally-header">
+  <section class="card">
+    <div class="card-head">
       <div>
-        <div class="section-title">Tally Live Payment Review</div>
-        <div class="tally-note">These records are already synced from Tally into <b>Payment_Reconciliation_Import</b>. Use <b>Suggest</b> to open the best live Payment Requisition matches, select the correct PO, then click <b>Accept</b>. The widget no longer depends on the Match_Suggestions subform.</div>
+        <div id="reportTitle" class="card-title">Loading...</div>
+        <div id="reportRule" class="card-rule"></div>
       </div>
-      <div class="tally-filter-row">
-        <select id="tallyCompanyFilter" onchange="renderTallyTable()">
-          <option value="">All Companies</option>
-          <option value="Mega EPC">Mega EPC</option>
-          <option value="Mega Engineering">Mega Engineering</option>
-          <option value="Enzo">Enzo</option>
-        </select>
-        <select id="tallyStatusFilter" onchange="renderTallyTable()">
-          <option value="">All Open Statuses</option>
-          <option>Matched</option>
-          <option>Suggested Match</option>
-          <option>Partial Payment</option>
-          <option>Split Matched</option>
-          <option>Suggested Split Match</option>
-          <option>Multiple Matches</option>
-          <option>Mismatch</option>
-          <option>Not Found</option>
-          <option>Pending</option>
-        </select>
-        <input id="tallySearch" placeholder="Search PO / vendor / project / UTR..." oninput="renderTallyTable()">
-        <button id="tallyRefreshBtn" class="btn" onclick="loadTallyPayments(true)">Refresh Tally Data</button>
-      </div>
+      <div id="reportCount" class="pill gray"></div>
     </div>
-
-    <div class="tally-stats">
-      <div class="tally-stat"><div class="l">Open Tally Entries</div><div id="tallyStatOpen" class="n">0</div></div>
-      <div class="tally-stat"><div class="l">Matched</div><div id="tallyStatMatched" class="n">0</div></div>
-      <div class="tally-stat"><div class="l">Partial / Split</div><div id="tallyStatPartial" class="n">0</div></div>
-      <div class="tally-stat"><div class="l">Need Review</div><div id="tallyStatReview" class="n">0</div></div>
-    </div>
-
-    <div id="tallyResultBody" class="tally-card-list"></div>
-    <div id="tallyEmpty" class="empty hidden"><strong>No open Tally payments found.</strong>Accepted records are removed from this open queue. Older Rejected records, if any, also remain excluded.</div>
+    <div id="reportNotice"></div>
+    <div id="reportBody" class="table-wrap"></div>
   </section>
 </div>
-
-<div id="drawerBackdrop" class="drawer-backdrop" onclick="closeDrawer()"></div>
-<aside id="drawer" class="drawer">
-  <div class="drawer-head">
-    <div>
-      <div id="drawerTitle" class="drawer-title">Match details</div>
-      <div id="drawerSub" class="drawer-sub"></div>
-    </div>
-    <button class="btn small" onclick="closeDrawer()">Close</button>
-  </div>
-  <div id="drawerBody" class="drawer-body"></div>
-  <div class="drawer-foot">
-    <button class="btn danger" onclick="rejectCurrent()">Reject / Leave Unmatched</button>
-    <button id="acceptCurrentBtn" class="btn primary" onclick="acceptCurrent()">Accept Selected Match</button>
-  </div>
-</aside>
 
 <div id="diagModal" class="modal-backdrop hidden">
   <div class="modal">
-    <div class="modal-head">
-      <strong>Connection & Field Diagnostics</strong>
-      <button class="btn small" onclick="closeDiagnostics()">Close</button>
-    </div>
+    <div class="modal-head"><strong>Connection &amp; Field Diagnostics</strong><button class="btn small" onclick="closeDiagnostics()">Close</button></div>
     <div id="diagBody" class="modal-body"></div>
   </div>
 </div>
-
-
-<div id="mappingModal" class="modal-backdrop hidden">
-  <div class="modal">
-    <div class="modal-head">
-      <strong>Map Excel Columns</strong>
-      <button class="btn small" onclick="closeMapping()">Close</button>
-    </div>
-    <div class="modal-body">
-      <div class="reason">
-        Auto-detection could not confidently identify the required columns.
-        Choose the correct Excel column for each field below. This lets users
-        upload files even when headings are named differently.
-      </div>
-      <div id="mappingSheetInfo" class="section-sub" style="margin-top:12px"></div>
-      <div style="display:grid;grid-template-columns:180px 1fr;gap:10px;align-items:center">
-        <b>PO Number *</b><select id="mapPO" class="searchbox"></select>
-        <b>Vendor Name *</b><select id="mapVendor" class="searchbox"></select>
-        <b>Eligible / Payment Amount *</b><select id="mapAmount" class="searchbox"></select>
-        <b>Project Code</b><select id="mapProject" class="searchbox"></select>
-        <b>Payment Date</b><select id="mapDate" class="searchbox"></select>
-        <b>Payment Type</b><select id="mapType" class="searchbox"></select>
-        <b>Payment Record Date</b><select id="mapPaymentRecordDate" class="searchbox"></select>
-        <b>Bank Name</b><select id="mapBankName" class="searchbox"></select>
-        <b>Paid Through</b><select id="mapPaidThrough" class="searchbox"></select>
-        <b>UTR No</b><select id="mapUTR" class="searchbox"></select>
-        <b>Transaction ID</b><select id="mapTransactionId" class="searchbox"></select>
-        <b>Account Number</b><select id="mapAccountNumber" class="searchbox"></select>
-        <b>Cheque No</b><select id="mapChequeNo" class="searchbox"></select>
-        <b>Remark / Note</b><select id="mapRemark" class="searchbox"></select>
-      </div>
-      <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:8px">
-        <button class="btn" onclick="closeMapping()">Cancel</button>
-        <button class="btn primary" onclick="applyManualMapping()">Use This Mapping</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="tallySuggestModal" class="modal-backdrop hidden">
-  <div class="modal" style="width:min(1080px,96vw)">
-    <div class="modal-head">
-      <div>
-        <strong>Suggested Payment Requisitions</strong>
-        <div class="cell-sub" style="margin-top:3px">Best matches are calculated live from All_Payment_Requisitions_INR. No Match_Suggestions subform is used.</div>
-      </div>
-      <button class="btn small" onclick="closeTallySuggestions()">Close</button>
-    </div>
-    <div class="modal-body">
-      <div id="tallySuggestContext"></div>
-      <div class="suggest-search-row">
-        <input id="tallySuggestSearch" placeholder="Search PO / vendor / project / eligible amount..." oninput="renderTallySuggestions()">
-        <button class="btn" onclick="document.getElementById('tallySuggestSearch').value='';renderTallySuggestions()">Clear</button>
-      </div>
-      <div class="section-sub">Select the correct Payment Requisition. The selected PR will be saved back to Match_Invoce_Report when you click Accept.</div>
-      <div id="tallySuggestList" class="suggest-list"></div>
-    </div>
-  </div>
-</div>
-
-<div id="tallyReviewModal" class="modal-backdrop hidden">
-  <div class="modal preview-modal">
-    <div class="modal-head">
-      <div>
-        <strong>Payment Details Preview</strong>
-        <div class="cell-sub" style="margin-top:3px">Review the complete payment record before acceptance. Values are fetched from the selected Payment Requisition plus the Tally reconciliation record.</div>
-      </div>
-      <button class="btn small" onclick="closeTallyReview()">Close</button>
-    </div>
-    <div id="tallyReviewBody" class="modal-body"></div>
-    <div class="modal-head" style="border-top:1px solid var(--border);border-bottom:0;justify-content:flex-end">
-      <div class="preview-actions">
-        <button class="btn" onclick="closeTallyReview()">Back</button>
-        <button id="tallyReviewAcceptBtn" class="btn primary" onclick="acceptTallyFromReview()">Accept Payment</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="tallyAcceptPopup" class="accept-check-backdrop hidden">
-  <div id="tallyAcceptPopupCard" class="accept-check-modal confirm">
-    <div class="accept-check-head">
-      <div id="tallyAcceptPopupIcon" class="accept-check-icon">✓</div>
-      <div>
-        <div id="tallyAcceptPopupTitle" class="accept-check-title">Confirm Payment</div>
-        <div id="tallyAcceptPopupMessage" class="accept-check-message"></div>
-      </div>
-    </div>
-    <div class="accept-check-body">
-      <div id="tallyAcceptPopupDetails" class="accept-check-details"></div>
-    </div>
-    <div class="accept-check-foot">
-      <button id="tallyAcceptPopupCancelBtn" class="btn" onclick="resolveTallyAcceptPopup(false)">Cancel</button>
-      <button id="tallyAcceptPopupOkBtn" class="btn primary" onclick="resolveTallyAcceptPopup(true)">Accept Payment</button>
-    </div>
-  </div>
-</div>
-
 <div id="toastWrap" class="toast-wrap"></div>
 
 <script>
 /* ============================================================================
-   PAYMENT RECONCILIATION WIDGET - CONFIGURATION
-
-   This file is intentionally self-contained for EXTERNAL hosting.
-
-   IMPORTANT:
-   - These are Zoho Creator LINK NAMES, not display labels.
-   - Confirm them in Creator Form/Report Builder if Diagnostics reports a mismatch.
-   - The existing Excel / CSV section keeps its current Payment_detals2 behavior.
-   - The Tally section never creates Payment_detals2 directly in JavaScript; it calls tally_payment_action / Accept_Tally_Payment.
+   PO PAYMENT REPORTS - CONFIGURATION
+   Link names (not display labels). Purchase Order fields accept a LIST of
+   possible link names: the widget uses the first one that really exists in
+   your Purchase Order report. Open Diagnostics to see which was detected.
 ============================================================================ */
 const CONFIG = {
   appName: "mega-engineering-sales",
 
-  // Tally live reconciliation - new section only. Existing Excel/CSV section remains unchanged.
-  tallyImportReport: "Match_Invoce_Report",
-  tallyActionApi: "tally_payment_action",
+  poReport: "Purchase_Order_Report",
+  poFields: {
+    po:      ["PO_No","PO_Number","PO_NO","PONo","PO"],
+    vendor:  ["Vendor_Name","Vendor"],
+    project: ["Project_Code","Project"],
+    // Amount the payments are compared with. Change the first name if your
+    // PO value (e.g. including GST) lives in a different field.
+    amount:  ["Sub_Total_in_INR","Total_in_INR","Total_Amount","Sub_Total"],
+    date:    ["PO_Date","Date","Added_Time"],
+    grn:     ["GRN_Status","GRN","GRN_Received","GRN_Done"]
+  },
 
-  paymentRequisitionReport: "All_Payment_Requisitions_INR",
-  paymentRequisitionFields: {
+  requisitionReport: "All_Payment_Requisitions_INR",
+  requisitionFields: {
     po: "PO_Number",
-    project: "Project_Code",
-    vendor: "Vendor_Name",
     eligible: "Eligible_Payment",
-    requestDate: "Payment_Request_Date",
-    paymentType: "Payment_Type",
-    requestStatus: "Payment_Request_Status"
+    date: "Payment_Request_Date",
+    type: "Payment_Type",
+    status: "Payment_Request_Status"
   },
+  // Requisitions with these statuses are ignored (case-insensitive).
+  ignoreRequisitionStatuses: ["rejected","cancelled","canceled"],
 
-  paymentDetailsForm: "Payment_detals2",
-  paymentDetailsReport: "All_Payment_Details_INR",
-  paymentDetailsFields: {
-    paymentRequisition: "Payment_Requisition",
+  paymentReport: "All_Payment_Details_INR",
+  paymentFields: {
     po: "PO_No",
-    vendor: "Vendor_Name",
-    requestDate: "Payment_Request_Date",
-    paymentType: "Payment_Type",
-    requestBasicAmount: "Request_Basic_Amount",
-    approvedAmount: "Approved_Amount",
-    percentage: "Percentage",
-    eligiblePayableAmount: "Eligible_Payable_Amount",
-    paymentDone: "Payment_Done",
-    bankName: "Bank_Name",
-    paidThrough: "Paid_Through",
+    requisition: "Payment_Requisition",
+    done: "Payment_Done",
+    date: "Payment_Record_Date",
+    type: "Payment_Type",
     utr: "UTR_No",
-    transactionId: "Transaction_ID",
-    accountNumber: "Account_Number",
-    chequeNo: "Cheque_No",
-    remarkNote: "Remark_Note",
-    importedAmount: "Imported_Amount",
-    amountDifference: "Amount_Difference",
-    differencePercentage: "Difference_Percentage",
-    matchScore: "Match_Score",
-    reconciliationStatus: "Reconciliation_Status",
-    matchRemarks: "Match_Remarks",
-    reconciledOn: "Reconciled_On"
+    txn: "Transaction_ID",
+    bank: "Bank_Name",
+    paidThrough: "Paid_Through"
   },
 
-  exactAmountTolerance: 1,
-  suggestedMinScore: 80,
-  mismatchMinScore: 50,
-  strongSelectMinScore: 90,
-  candidateCount: 5,
-  tallySuggestionCount: 15,
+  /* GRN (Goods Receipt Note).
+     Option A (default): a GRN status field on the Purchase Order report
+       (detected from poFields.grn above).
+     Option B: a separate GRN report. Fill in report + poField (+ statusField
+       if it has a received/pending status). Leave report "" to use Option A. */
+  grn: {
+    report: "",
+    poField: "PO_Number",
+    statusField: "",
+    receivedValues: ["received","yes","done","completed","complete","closed","grn done","fully received"]
+  },
 
-  // No record will be created if there is no existing Payment_detals2 record.
-  allowCreatePaymentDetail: true,
-
-  // Reconciliation_Status is intentionally not written by the widget
-  // until the exact Creator choice values are confirmed.
-  acceptedReconciliationStatus: "",
-
-  // Your Amount_Difference field visually supports about ##,###,###.##
-  // (7 integer digits + 2 decimals). If a difference is larger than this,
-  // the widget keeps the full value in Match_Remarks and skips writing the
-  // numeric Amount_Difference field so record creation does not fail.
-  amountDifferenceMax: 9999999.99,
-
-  // Flexible file-column aliases. Users can upload files with different
-  // capitalization, spaces, punctuation, ₹ / Rs / INR / $ formats, etc.
-  importAliases: {
-    po: [
-      "po no","po number","po","po#","p.o. no","p.o no",
-      "purchase order","purchase order no","purchase order number","order no","order number"
-    ],
-    vendor: [
-      "vendor name","vendor","supplier name","supplier","party name","party","payee","beneficiary"
-    ],
-    amount: [
-      "eligible payment","eligible amount","payment amount","amount","payable amount",
-      "approved amount","net amount","paid amount","invoice amount","total amount"
-    ],
-    project: [
-      "project code","project","project cod","proj code","proj. code","job code","project no","project number"
-    ],
-    date: [
-      "payment request date","payment date","request date","date","transaction date","paid date"
-    ],
-    type: [
-      "payment type","type","payment category","category"
-    ],
-    paymentRecordDate: [
-      "payment record date","record date","bank payment date","payment done date","transaction date"
-    ],
-    bankName: [
-      "bank name","bank","paying bank","payment bank"
-    ],
-    paidThrough: [
-      "paid through","payment mode","mode of payment","payment method","paid by","mode"
-    ],
-    utr: [
-      "utr no","utr","utr number","bank reference","bank ref","reference no",
-      "reference number","bank transaction reference"
-    ],
-    transactionId: [
-      "transaction id","txn id","transaction no","transaction number","bank transaction id"
-    ],
-    accountNumber: [
-      "account number","account no","a c no","ac no","bank account number"
-    ],
-    chequeNo: [
-      "cheque no","cheque number","check no","check number"
-    ],
-    remark: [
-      "remark","remarks","remark note","note","narration","description"
-    ]
-  }
+  tolerance: 1,            // amounts within this many rupees count as equal
+  slowAwaitingDays: 15     // "Awaiting Initial Payment Request" turns red after this many days
 };
 
-/* ============================== STATE ====================================== */
+/* ============================== STATE ===================================== */
 const STATE = {
-  creatorReady: false,
-  creatorError: null,
-  paymentRequisitions: [],
-  paymentDetails: [],
-  importedRows: [],
-  results: [],
-  currentFile: null,
-  activeFilter: "all",
-  drawerIndex: null,
-  pendingSheets: null,
-  pendingManualTable: null,
-
-  // Tally live mode
-  tallyLoaded: false,
-  tallyRows: [],
-  tallyBusy: false,
-  tallySuggestRowId: null,
-  tallyReviewRowId: null,
-  reconciliationMode: "file"
+  ready:false, error:null, warnings:[],
+  poRaw:[], prRaw:[], pdRaw:[], grnRaw:[],
+  keys:{},            // detected PO field names
+  model:null,         // built aggregation
+  filtered:null,      // after filters
+  active:"awaiting",
+  sort:{},            // per report {col,dir}
+  expanded:{}         // per report set of row ids
 };
 
-/* ============================= HELPERS ===================================== */
+/* ============================== HELPERS =================================== */
 function htmlEscape(v){
-  return String(v ?? "")
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+  return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
 }
-
-function valueText(v, preferredKeys){
+function valueText(v, preferred){
   if(v === null || v === undefined) return "";
   if(typeof v === "string" || typeof v === "number" || typeof v === "boolean") return String(v);
-  if(Array.isArray(v)) return v.map(x => valueText(x, preferredKeys)).filter(Boolean).join(", ");
+  if(Array.isArray(v)) return v.map(x=>valueText(x,preferred)).filter(Boolean).join(", ");
   if(typeof v === "object"){
-    preferredKeys = preferredKeys || [];
-    for(const k of preferredKeys){
+    for(const k of (preferred||[])){
       if(v[k] !== undefined && v[k] !== null && String(v[k]).trim() !== "") return valueText(v[k]);
     }
     for(const k of ["display_value","zc_display_value","value","name","Name"]){
-      if(v[k] !== undefined && v[k] !== null){
-        const s = valueText(v[k], preferredKeys);
-        if(s) return s;
-      }
+      if(v[k] !== undefined && v[k] !== null){ const s=valueText(v[k],preferred); if(s) return s; }
     }
-    // Zoho lookup maps often include ID plus their configured display field.
     for(const [k,val] of Object.entries(v)){
-      if(k === "ID" || k === "id") continue;
-      const s = valueText(val, preferredKeys);
-      if(s) return s;
+      if(k==="ID"||k==="id") continue;
+      const s=valueText(val,preferred); if(s) return s;
     }
   }
   return "";
 }
-
 function lookupId(v){
   if(v && typeof v === "object") return String(v.ID || v.id || "");
   return "";
 }
-
 function cleanAmount(raw){
   if(raw === null || raw === undefined || raw === "") return 0;
   if(typeof raw === "number") return isFinite(raw) ? raw : 0;
-
+  if(typeof raw === "object") raw = valueText(raw);
   let s=String(raw).trim();
   if(!s) return 0;
-
-  // Handle negatives like (1,234.50)
   const negative=/^\s*\(.*\)\s*$/.test(s);
-
-  // Normalize unicode spaces/dashes and common currency wording.
-  s=s
-    .replace(/\u00A0/g," ")
-    .replace(/[₹₨]/g," ")
-    .replace(/\$/g," ")
-    .replace(/\b(INR|INR\.|RS|RS\.|RUPEE|RUPEES|USD|US\$|DOLLAR|DOLLARS)\b/gi," ")
-    .replace(/,/g,"")
-    .replace(/\s+/g,"")
-    .replace(/[^\d.\-]/g,"");
-
-  // If multiple dots remain, keep the last one as decimal separator.
+  s=s.replace(/ /g," ").replace(/[₹₨]/g," ").replace(/\$/g," ")
+     .replace(/\b(INR|RS|RUPEE|RUPEES|USD|DOLLAR|DOLLARS)\b\.?/gi," ")
+     .replace(/,/g,"").replace(/\s+/g,"").replace(/[^\d.\-]/g,"");
   const parts=s.split(".");
-  if(parts.length>2){
-    s=parts.slice(0,-1).join("")+"."+parts[parts.length-1];
-  }
-
-  let n=parseFloat(s);
-  if(!isFinite(n)) n=0;
+  if(parts.length>2) s=parts.slice(0,-1).join("")+"."+parts[parts.length-1];
+  let n=parseFloat(s); if(!isFinite(n)) n=0;
   return negative ? -Math.abs(n) : n;
 }
-
-function normPO(v){
-  return valueText(v, ["PO_Number","PO_No"])
-    .toUpperCase().replace(/\s+/g,"").replace(/[‐‑‒–—]/g,"-").trim();
+function normKey(v){
+  return String(v||"").toUpperCase().replace(/\s+/g,"").replace(/[‐‑‒–—]/g,"-").trim();
 }
-function poCore(v){ return normPO(v).replace(/[^A-Z0-9]/g,""); }
-
-function normProject(v){
-  return valueText(v, ["Project_Code"]).toUpperCase().replace(/\s+/g,"").trim();
-}
-
-function normVendor(v){
-  return valueText(v, ["Vendor_Display_Name","Vendor_Name"])
-    .toUpperCase()
-    .replace(/&/g," AND ")
-    .replace(/\b(PVT\.?|PRIVATE)\b/g," PRIVATE ")
-    .replace(/\b(LTD\.?|LIMITED)\b/g," LIMITED ")
-    .replace(/[^A-Z0-9]+/g," ")
-    .replace(/\s+/g," ")
-    .trim();
-}
-
-function levenshtein(a,b){
-  a = String(a || ""); b = String(b || "");
-  if(a === b) return 0;
-  if(!a.length) return b.length;
-  if(!b.length) return a.length;
-  const prev = Array.from({length:b.length+1},(_,i)=>i);
-  const cur = new Array(b.length+1);
-  for(let i=1;i<=a.length;i++){
-    cur[0]=i;
-    for(let j=1;j<=b.length;j++){
-      cur[j]=Math.min(
-        cur[j-1]+1,
-        prev[j]+1,
-        prev[j-1]+(a[i-1]===b[j-1]?0:1)
-      );
-    }
-    for(let j=0;j<=b.length;j++) prev[j]=cur[j];
+function canonicalKey(v){ return String(v||"").toLowerCase().replace(/[^a-z0-9]+/g,""); }
+function resolveKey(record, candidates){
+  if(!record) return null;
+  const keys=Object.keys(record);
+  for(const c of (Array.isArray(candidates)?candidates:[candidates])){
+    const hit=keys.find(k=>canonicalKey(k)===canonicalKey(c));
+    if(hit) return hit;
   }
-  return prev[b.length];
+  return null;
 }
-
-function similarity(a,b){
-  a=String(a||""); b=String(b||"");
-  if(!a && !b) return 1;
-  if(!a || !b) return 0;
-  if(a===b) return 1;
-  return Math.max(0,1 - levenshtein(a,b)/Math.max(a.length,b.length));
-}
-
-function vendorSimilarity(a,b){
-  const A=normVendor(a), B=normVendor(b);
-  if(!A || !B) return 0;
-  if(A===B) return 1;
-  const edit = similarity(A,B);
-  const ta=new Set(A.split(" ")), tb=new Set(B.split(" "));
-  const inter=[...ta].filter(x=>tb.has(x)).length;
-  const union=new Set([...ta,...tb]).size || 1;
-  const jaccard=inter/union;
-  return Math.max(edit,jaccard);
-}
-
-function poSimilarity(a,b){
-  const A=poCore(a), B=poCore(b);
-  if(!A || !B) return 0;
-  if(A===B) return 1;
-  return similarity(A,B);
-}
-
-function amountDiffPct(a,b){
-  const diff=Math.abs(Number(a||0)-Number(b||0));
-  const base=Math.abs(Number(b||0));
-  return base===0 ? (diff===0?0:100) : (diff/base)*100;
-}
-
+function round2(n){ return Math.round((Number(n||0)+Number.EPSILON)*100)/100; }
 function money(n){
-  return "₹ " + Number(n||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
+  return "₹ "+Number(n||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
 }
-function pct(n){ return Number(n||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:3}) + "%"; }
+function pct(n){ return Number(n||0).toLocaleString("en-IN",{minimumFractionDigits:0,maximumFractionDigits:1})+"%"; }
 
-function round2(n){
-  n=Number(n||0);
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+function parseDate(v){
+  const s=valueText(v).trim();
+  if(!s) return null;
+  const m=s.match(/^(\d{1,2})[-\/ ]([A-Za-z]{3,9})[-\/ ](\d{4})/);
+  if(m){
+    const mon=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"].indexOf(m[2].slice(0,3).toLowerCase());
+    if(mon>=0) return new Date(Number(m[3]),mon,Number(m[1]));
+  }
+  const m2=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+  if(m2) return new Date(Number(m2[3]),Number(m2[2])-1,Number(m2[1]));
+  const d=new Date(s);
+  return isNaN(d.getTime()) ? null : d;
 }
-
-function dateTimeForCreator(){
-  // Uses common dd-MMM-yyyy HH:mm:ss style. If your app uses a different
-  // Date-Time format, remove Reconciled_On from CONFIG or change this formatter.
-  const d=new Date();
+function fmtDate(d){
+  if(!d) return "—";
   const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];
-  const pad=x=>String(x).padStart(2,"0");
-  return `${pad(d.getDate())}-${m}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  return String(d.getDate()).padStart(2,"0")+"-"+m+"-"+d.getFullYear();
 }
-
-function escCriteriaString(v){
-  return String(v??"").replace(/\\/g,"\\\\").replace(/"/g,'\\"');
+function daysSince(d){
+  if(!d) return null;
+  return Math.max(0,Math.floor((Date.now()-d.getTime())/86400000));
 }
-
 function toast(msg,type){
   const wrap=document.getElementById("toastWrap");
   const el=document.createElement("div");
-  el.className="toast "+(type||"");
-  el.textContent=msg;
-  wrap.appendChild(el);
-  setTimeout(()=>el.remove(),4200);
+  el.className="toast "+(type||""); el.textContent=msg;
+  wrap.appendChild(el); setTimeout(()=>el.remove(),4200);
 }
-
-function statusLabel(s){
-  return ({
-    "matched":"Matched",
-    "suggested":"Suggested Match",
-    "mismatch":"Mismatch",
-    "not-found":"Not Found",
-    "accepted":"Accepted",
-    "config-error":"Config Error"
-  })[s] || s;
-}
-
-/* ========================= CREATOR DATA ACCESS ============================= */
-function assertCreator(){
-  if(!(window.ZOHO && ZOHO.CREATOR && ZOHO.CREATOR.DATA)){
-    throw new Error("Zoho Creator Widget SDK context is not available. Open this external page through a Zoho Creator Widget/Page, not as a normal standalone webpage.");
-  }
-}
-
-// V2 does NOT require ZOHO.CREATOR.init().
-async function getRecords(reportName, opts){
-  assertCreator();
-  opts=opts||{};
-
-  const cfg={
-    app_name:CONFIG.appName,
-    report_name:reportName,
-    max_records:1000,
-    field_config:"all"
-  };
-
-  if(opts.criteria) cfg.criteria=opts.criteria;
-  if(opts.record_cursor) cfg.record_cursor=opts.record_cursor;
-
-  const res=await ZOHO.CREATOR.DATA.getRecords(cfg);
-
-  if(res && res.code && res.code!==3000){
-    const creatorErrors=Array.isArray(res.error)?res.error.join(" | "):"";
-    throw new Error(creatorErrors || res.message || JSON.stringify(res));
-  }
-
-  return res || {data:[]};
-}
-
-function extractRecordCursor(res){
-  if(!res) return "";
-
-  const direct =
-    res.record_cursor ||
-    res.recordCursor ||
-    res.next_record_cursor ||
-    res.nextRecordCursor ||
-    res.info?.record_cursor ||
-    res.info?.recordCursor ||
-    res.meta?.record_cursor ||
-    res.meta?.recordCursor ||
-    res.header?.record_cursor ||
-    res.headers?.record_cursor ||
-    res.response?.record_cursor ||
-    res.response?.headers?.record_cursor;
-
-  if(direct) return String(direct);
-
-  try{
-    if(res.headers && typeof res.headers.get==="function"){
-      const h=res.headers.get("record_cursor") || res.headers.get("record-cursor");
-      if(h) return String(h);
-    }
-  }catch(_e){}
-
-  return "";
-}
-
-async function getAllRecords(reportName, progressLabel){
-  const all=[];
-  const seenCursors=new Set();
-  let cursor="";
-
-  while(true){
-    setConnection(
-      true,
-      `${progressLabel || reportName}: ${all.length.toLocaleString("en-IN")} loaded...`
-    );
-
-    const res=await getRecords(reportName,{
-      record_cursor:cursor || undefined
-    });
-
-    const batch=Array.isArray(res.data)?res.data:[];
-    all.push(...batch);
-
-    const nextCursor=extractRecordCursor(res);
-
-    if(!nextCursor) break;
-
-    if(seenCursors.has(nextCursor)){
-      throw new Error(
-        `Creator returned a repeated record cursor while loading ${reportName}. ` +
-        `Loaded ${all.length} records before stopping to prevent an infinite loop.`
-      );
-    }
-
-    seenCursors.add(nextCursor);
-    cursor=nextCursor;
-
-    await new Promise(resolve=>setTimeout(resolve,25));
-  }
-
-  return all;
-}
-
-async function fetchCoreCreatorData(){
-  STATE.paymentRequisitions=await getAllRecords(
-    CONFIG.paymentRequisitionReport,
-    "Loading all Payment Requisitions"
-  );
-
-  STATE.paymentDetails=await getAllRecords(
-    CONFIG.paymentDetailsReport,
-    "Loading all Payment Details"
-  );
-}
-
-async function refreshCreatorData(){
-  setConnection(false,"Refreshing Creator...");
-  try{
-    await fetchCoreCreatorData();
-    STATE.creatorReady=true;
-    STATE.creatorError=null;
-    setConnection(
-      true,
-      `Creator Live · ${STATE.paymentRequisitions.length.toLocaleString("en-IN")} requisitions · ${STATE.paymentDetails.length.toLocaleString("en-IN")} payment details · all loaded`
-    );
-    toast("Creator data refreshed.","success");
-    if(STATE.importedRows.length) buildMatches();
-  }catch(err){
-    STATE.creatorReady=false;
-    STATE.creatorError=err;
-    setConnection(false,"Creator connection failed");
-    toast(err.message || String(err),"error");
-  }
-}
-
 function setConnection(ok,text){
   document.getElementById("connDot").className="dot "+(ok?"ok":"bad");
   document.getElementById("connText").textContent=text;
 }
 
-/* ============================ FILE INPUT =================================== */
-const dropzone=document.getElementById("dropzone");
-const fileInput=document.getElementById("fileInput");
-["dragenter","dragover"].forEach(evt=>dropzone.addEventListener(evt,e=>{e.preventDefault();dropzone.classList.add("drag")}));
-["dragleave","drop"].forEach(evt=>dropzone.addEventListener(evt,e=>{e.preventDefault();dropzone.classList.remove("drag")}));
-dropzone.addEventListener("drop",e=>{
-  const f=e.dataTransfer.files && e.dataTransfer.files[0];
-  if(f) setFile(f);
-});
-fileInput.addEventListener("change",()=>{ if(fileInput.files[0]) setFile(fileInput.files[0]); });
-
-function setFile(file){
-  const ok=/\.(xlsx|xls|csv)$/i.test(file.name);
-  if(!ok){toast("Please choose an .xlsx, .xls or .csv file.","error");return}
-  STATE.currentFile=file;
-  document.getElementById("fileName").textContent=file.name;
-  document.getElementById("fileInfo").textContent=(file.size/1024).toFixed(1)+" KB · ready to read";
-  document.getElementById("fileMeta").classList.remove("hidden");
-}
-
-function clearFile(){
-  STATE.currentFile=null;STATE.importedRows=[];STATE.results=[];
-  fileInput.value="";
-  document.getElementById("fileMeta").classList.add("hidden");
-  document.getElementById("statsSection").classList.add("hidden");
-  document.getElementById("resultsCard").classList.add("hidden");
-  setProgress(0,"",false);
-}
-
-function setProgress(percent,text,show){
-  const w=document.getElementById("progressWrap");
-  w.classList.toggle("hidden",!show);
-  document.getElementById("progressBar").style.width=Math.max(0,Math.min(100,percent))+"%";
-  document.getElementById("progressText").textContent=text||"";
-}
-
-function readWorkbook(file){
-  return new Promise((resolve,reject)=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
-      try{
-        const wb=XLSX.read(e.target.result,{type:"array",cellDates:true});
-
-        // Read sheets as raw row arrays first. This lets us handle Excel files
-        // that contain blank rows, report titles, merged headings, logos, etc.
-        // above the real table header.
-        const sheets=[];
-        wb.SheetNames.forEach(name=>{
-          const sh=wb.Sheets[name];
-          const rawRows=XLSX.utils.sheet_to_json(sh,{
-            header:1,
-            defval:"",
-            raw:false,
-            blankrows:false
-          });
-          sheets.push({name,rows:rawRows});
-        });
-
-        resolve(sheets);
-      }catch(err){reject(err)}
-    };
-    reader.onerror=reject;
-    reader.readAsArrayBuffer(file);
-  });
-}
-
-function canonicalHeader(h){
-  return String(h||"")
-    .toLowerCase()
-    .replace(/[₹$€£]/g," ")
-    .replace(/[._\-/#:()]+/g," ")
-    .replace(/\s+/g," ")
-    .trim();
-}
-
-function detectColumn(headers,candidates){
-  const canon=headers.map(h=>({raw:h,c:canonicalHeader(h)}));
-  const wanted=(candidates||[]).map(canonicalHeader);
-
-  // Exact normalized header first.
-  for(const w of wanted){
-    const exact=canon.find(x=>x.c===w);
-    if(exact) return exact.raw;
-  }
-
-  // Then token/contains match.
-  for(const w of wanted){
-    const contains=canon.find(x=>x.c.includes(w) || w.includes(x.c));
-    if(contains) return contains.raw;
-  }
-
-  return null;
-}
-
-function headerSignal(row){
-  const cells=(row||[]).map(c=>canonicalHeader(c)).filter(Boolean);
-  if(!cells.length) return 0;
-
-  const hasAlias = aliases => cells.some(cell =>
-    aliases.map(canonicalHeader).some(a => cell===a || cell.includes(a) || a.includes(cell))
-  );
-
-  let score=0;
-  if(hasAlias(CONFIG.importAliases.po)) score++;
-  if(hasAlias(CONFIG.importAliases.vendor)) score++;
-  if(hasAlias(CONFIG.importAliases.amount)) score++;
-  if(hasAlias(CONFIG.importAliases.project)) score++;
-  return score;
-}
-
-function makeUniqueHeaders(row){
-  const used={};
-  return (row||[]).map((v,i)=>{
-    let h=String(v||"").trim();
-    if(!h) h="__EMPTY_"+i;
-    if(used[h]===undefined){
-      used[h]=0;
-      return h;
-    }
-    used[h]++;
-    return h+"_"+used[h];
-  });
-}
-
-function rawSheetToObjects(sheet){
-  const rows=sheet.rows||[];
-  if(!rows.length) return null;
-
-  // Look through the first 50 physical rows for the real header.
-  // We require PO + Vendor + Amount signals (score >= 3).
-  let headerIndex=-1;
-  let bestScore=-1;
-
-  for(let i=0;i<Math.min(rows.length,50);i++){
-    const score=headerSignal(rows[i]);
-    if(score>bestScore){
-      bestScore=score;
-      headerIndex=i;
-    }
-    if(score>=3){
-      headerIndex=i;
-      break;
-    }
-  }
-
-  if(headerIndex<0 || bestScore<3) return null;
-
-  const headers=makeUniqueHeaders(rows[headerIndex]);
-  const objects=[];
-
-  for(let r=headerIndex+1;r<rows.length;r++){
-    const arr=rows[r]||[];
-    const hasData=arr.some(v=>String(v??"").trim()!=="");
-    if(!hasData) continue;
-
-    const obj={};
-    headers.forEach((h,c)=>{
-      obj[h]=arr[c]===undefined?"":arr[c];
-    });
-    objects.push(obj);
-  }
-
-  return {
-    sheetName:sheet.name,
-    headerRow:headerIndex+1,
-    headers,
-    objects
-  };
-}
-
-function findBestImportTable(sheets){
-  let best=null;
-
-  for(const sheet of sheets){
-    const parsed=rawSheetToObjects(sheet);
-    if(!parsed) continue;
-
-    const headers=parsed.headers;
-    const poCol=detectColumn(headers,CONFIG.importAliases.po);
-    const vendorCol=detectColumn(headers,CONFIG.importAliases.vendor);
-    const amountCol=detectColumn(headers,CONFIG.importAliases.amount);
-
-    const score=(poCol?1:0)+(vendorCol?1:0)+(amountCol?1:0);
-    if(!best || score>best.score || (score===best.score && parsed.objects.length>best.parsed.objects.length)){
-      best={score,parsed};
-    }
-    if(score===3) break;
-  }
-
-  if(!best || best.score<3){
-    const sheetSummary=(sheets||[]).map(s=>{
-      const preview=(s.rows||[]).slice(0,8)
-        .map((r,i)=>`Row ${i+1}: ${(r||[]).filter(v=>String(v??"").trim()!=="").slice(0,8).join(" | ")}`)
-        .join("\n");
-      return `Sheet "${s.name}"\n${preview}`;
-    }).join("\n\n");
-    throw new Error(
-      "Could not locate the real header row automatically. The file must contain PO No, Vendor Name and Eligible Payment/Amount columns.\n\nFirst rows detected:\n"+sheetSummary
-    );
-  }
-
-  return best.parsed;
-}
-
-function parseImportedRows(rows){
-  if(!rows.length) throw new Error("No data rows were found below the detected header.");
-  const headers=Object.keys(rows[0]);
-
-  const poCol=detectColumn(headers,CONFIG.importAliases.po);
-  const vendorCol=detectColumn(headers,CONFIG.importAliases.vendor);
-  const amountCol=detectColumn(headers,CONFIG.importAliases.amount);
-  const projectCol=detectColumn(headers,CONFIG.importAliases.project);
-  const dateCol=detectColumn(headers,CONFIG.importAliases.date);
-  const typeCol=detectColumn(headers,CONFIG.importAliases.type);
-  const paymentRecordDateCol=detectColumn(headers,CONFIG.importAliases.paymentRecordDate);
-  const bankNameCol=detectColumn(headers,CONFIG.importAliases.bankName);
-  const paidThroughCol=detectColumn(headers,CONFIG.importAliases.paidThrough);
-  const utrCol=detectColumn(headers,CONFIG.importAliases.utr);
-  const transactionIdCol=detectColumn(headers,CONFIG.importAliases.transactionId);
-  const accountNumberCol=detectColumn(headers,CONFIG.importAliases.accountNumber);
-  const chequeNoCol=detectColumn(headers,CONFIG.importAliases.chequeNo);
-  const remarkCol=detectColumn(headers,CONFIG.importAliases.remark);
-
-  if(!poCol || !vendorCol || !amountCol){
-    throw new Error(
-      "Required columns were not detected after finding the header row. " +
-      "Need PO No, Vendor Name and Eligible Payment/Amount. Found headers: " +
-      headers.join(", ")
-    );
-  }
-
-  // Your source workbook uses merged Project Code cells. In XLSX data,
-  // only the first row of a merged block contains the value; the rows below
-  // are blank. Carry the last nonblank Project Code downward so each PO row
-  // receives its correct project.
-  let lastProject="";
-
-  const result=[];
-  rows.forEach((r,i)=>{
-    const po=String(r[poCol]??"").trim();
-    if(!po) return; // also skips subtotal / blank rows
-
-    if(projectCol){
-      const thisProject=String(r[projectCol]??"").trim();
-      if(thisProject!=="") lastProject=thisProject;
-    }
-
-    result.push({
-      rowNo:i+1,
-      project:projectCol ? (String(r[projectCol]??"").trim() || lastProject) : "",
-      po:r[poCol],
-      vendor:r[vendorCol],
-      amount:cleanAmount(r[amountCol]),
-      paymentDate:dateCol?r[dateCol]:"",
-      paymentType:typeCol?r[typeCol]:"",
-      paymentRecordDate:paymentRecordDateCol?r[paymentRecordDateCol]:"",
-      bankName:bankNameCol?r[bankNameCol]:"",
-      paidThrough:paidThroughCol?r[paidThroughCol]:"",
-      utr:utrCol?r[utrCol]:"",
-      transactionId:transactionIdCol?r[transactionIdCol]:"",
-      accountNumber:accountNumberCol?r[accountNumberCol]:"",
-      chequeNo:chequeNoCol?r[chequeNoCol]:"",
-      remark:remarkCol?r[remarkCol]:"",
-      source:r
-    });
-  });
-
-  return result;
-}
-
-async function processCurrentFile(){
-  if(!STATE.currentFile){toast("Choose a file first.","error");return}
-  if(!STATE.creatorReady){
-    toast("Creator data is not connected yet. Click Refresh Creator Data or open the widget inside Creator.","error");
-    return;
-  }
-
-  try{
-    document.getElementById("processBtn").disabled=true;
-    setProgress(12,"Reading Excel / CSV...",true);
-    const sheets=await readWorkbook(STATE.currentFile);
-
-    let table=null;
-    try{
-      table=findBestImportTable(sheets);
-    }catch(autoErr){
-      setProgress(25,"Auto-detection needs help. Choose the Excel columns manually...",true);
-      openMapping(sheets);
-      return;
-    }
-
-    setProgress(
-      35,
-      `Using sheet "${table.sheetName}", header row ${table.headerRow}. Headers: ${table.headers.filter(h=>!String(h).startsWith("__EMPTY")).join(" | ")}. Detected ${table.objects.length} data row(s)...`,
-      true
-    );
-    STATE.importedRows=parseImportedRows(table.objects);
-
-    setProgress(58,"Comparing with Payment Requisition records...",true);
-    await new Promise(r=>setTimeout(r,30));
-    buildMatches();
-
-    setProgress(100,"Reconciliation preview ready. Nothing has been updated yet.",true);
-    setTimeout(()=>setProgress(100,"Preview ready. Review suggestions before accepting.",true),200);
-  }catch(err){
-    toast(err.message||String(err),"error");
-    setProgress(0,"Could not process file.",true);
-  }finally{
-    document.getElementById("processBtn").disabled=false;
+/* ========================= CREATOR DATA ACCESS ============================ */
+function assertCreator(){
+  if(!(window.ZOHO && ZOHO.CREATOR && ZOHO.CREATOR.DATA)){
+    throw new Error("Zoho Creator Widget SDK is not available. Open this page through a Zoho Creator Widget, not as a normal webpage.");
   }
 }
-
-
-/* ========================= MANUAL COLUMN MAPPING =========================== */
-function openMapping(sheets){
-  STATE.pendingSheets=sheets;
-
-  // Pick the sheet with the most nonempty rows and find its best-looking header row.
-  let bestSheet=null,bestRowIndex=0,bestCount=-1,bestSignal=-1;
-
-  for(const sheet of sheets){
-    const rows=sheet.rows||[];
-    for(let i=0;i<Math.min(rows.length,100);i++){
-      const nonempty=(rows[i]||[]).filter(v=>String(v??"").trim()!=="").length;
-      const signal=headerSignal(rows[i]);
-      if(signal>bestSignal || (signal===bestSignal && nonempty>bestCount)){
-        bestSignal=signal;bestCount=nonempty;bestSheet=sheet;bestRowIndex=i;
-      }
-    }
-  }
-
-  if(!bestSheet) throw new Error("No readable worksheet was found.");
-
-  const headers=makeUniqueHeaders(bestSheet.rows[bestRowIndex]||[]);
-  const objects=[];
-  for(let r=bestRowIndex+1;r<bestSheet.rows.length;r++){
-    const arr=bestSheet.rows[r]||[];
-    if(!arr.some(v=>String(v??"").trim()!=="")) continue;
-    const obj={};
-    headers.forEach((h,c)=>obj[h]=arr[c]===undefined?"":arr[c]);
-    objects.push(obj);
-  }
-
-  STATE.pendingManualTable={
-    sheetName:bestSheet.name,
-    headerRow:bestRowIndex+1,
-    headers,
-    objects
-  };
-
-  const visibleHeaders=headers.filter(h=>!String(h).startsWith("__EMPTY"));
-  const opts=['<option value="">-- Not mapped --</option>']
-    .concat(visibleHeaders.map(h=>`<option value="${htmlEscape(h)}">${htmlEscape(h)}</option>`))
-    .join("");
-
-  ["mapPO","mapVendor","mapAmount","mapProject","mapDate","mapType","mapPaymentRecordDate","mapBankName","mapPaidThrough","mapUTR","mapTransactionId","mapAccountNumber","mapChequeNo","mapRemark"].forEach(id=>{
-    document.getElementById(id).innerHTML=opts;
-  });
-
-  // Try to preselect anything we can recognize.
-  document.getElementById("mapPO").value=detectColumn(headers,CONFIG.importAliases.po)||"";
-  document.getElementById("mapVendor").value=detectColumn(headers,CONFIG.importAliases.vendor)||"";
-  document.getElementById("mapAmount").value=detectColumn(headers,CONFIG.importAliases.amount)||"";
-  document.getElementById("mapProject").value=detectColumn(headers,CONFIG.importAliases.project)||"";
-  document.getElementById("mapDate").value=detectColumn(headers,CONFIG.importAliases.date)||"";
-  document.getElementById("mapType").value=detectColumn(headers,CONFIG.importAliases.type)||"";
-  document.getElementById("mapPaymentRecordDate").value=detectColumn(headers,CONFIG.importAliases.paymentRecordDate)||"";
-  document.getElementById("mapBankName").value=detectColumn(headers,CONFIG.importAliases.bankName)||"";
-  document.getElementById("mapPaidThrough").value=detectColumn(headers,CONFIG.importAliases.paidThrough)||"";
-  document.getElementById("mapUTR").value=detectColumn(headers,CONFIG.importAliases.utr)||"";
-  document.getElementById("mapTransactionId").value=detectColumn(headers,CONFIG.importAliases.transactionId)||"";
-  document.getElementById("mapAccountNumber").value=detectColumn(headers,CONFIG.importAliases.accountNumber)||"";
-  document.getElementById("mapChequeNo").value=detectColumn(headers,CONFIG.importAliases.chequeNo)||"";
-  document.getElementById("mapRemark").value=detectColumn(headers,CONFIG.importAliases.remark)||"";
-
-  document.getElementById("mappingSheetInfo").textContent=
-    `Sheet: ${bestSheet.name} · header row candidate: ${bestRowIndex+1}`;
-
-  document.getElementById("mappingModal").classList.remove("hidden");
-}
-
-function closeMapping(){
-  document.getElementById("mappingModal").classList.add("hidden");
-}
-
-function applyManualMapping(){
-  const t=STATE.pendingManualTable;
-  if(!t) return;
-
-  const poCol=document.getElementById("mapPO").value;
-  const vendorCol=document.getElementById("mapVendor").value;
-  const amountCol=document.getElementById("mapAmount").value;
-  const projectCol=document.getElementById("mapProject").value;
-  const dateCol=document.getElementById("mapDate").value;
-  const typeCol=document.getElementById("mapType").value;
-  const paymentRecordDateCol=document.getElementById("mapPaymentRecordDate").value;
-  const bankNameCol=document.getElementById("mapBankName").value;
-  const paidThroughCol=document.getElementById("mapPaidThrough").value;
-  const utrCol=document.getElementById("mapUTR").value;
-  const transactionIdCol=document.getElementById("mapTransactionId").value;
-  const accountNumberCol=document.getElementById("mapAccountNumber").value;
-  const chequeNoCol=document.getElementById("mapChequeNo").value;
-  const remarkCol=document.getElementById("mapRemark").value;
-
-  if(!poCol || !vendorCol || !amountCol){
-    toast("PO Number, Vendor Name and Amount are required mappings.","error");
-    return;
-  }
-
-  let lastProject="";
-  STATE.importedRows=t.objects
-    .filter(r=>String(r[poCol]??"").trim()!=="")
-    .map((r,i)=>{
-      if(projectCol){
-        const p=String(r[projectCol]??"").trim();
-        if(p) lastProject=p;
-      }
-      return {
-        rowNo:i+1,
-        project:projectCol?(String(r[projectCol]??"").trim()||lastProject):"",
-        po:r[poCol],
-        vendor:r[vendorCol],
-        amount:cleanAmount(r[amountCol]),
-        paymentDate:dateCol?r[dateCol]:"",
-        paymentType:typeCol?r[typeCol]:"",
-        paymentRecordDate:paymentRecordDateCol?r[paymentRecordDateCol]:"",
-        bankName:bankNameCol?r[bankNameCol]:"",
-        paidThrough:paidThroughCol?r[paidThroughCol]:"",
-        utr:utrCol?r[utrCol]:"",
-        transactionId:transactionIdCol?r[transactionIdCol]:"",
-        accountNumber:accountNumberCol?r[accountNumberCol]:"",
-        chequeNo:chequeNoCol?r[chequeNoCol]:"",
-        remark:remarkCol?r[remarkCol]:"",
-        source:r
-      };
-    });
-
-  closeMapping();
-  if(!STATE.importedRows.length){
-    toast("No data rows were found using that mapping.","error");
-    return;
-  }
-
-  setProgress(58,"Comparing manually mapped rows with Payment Requisition records...",true);
-  buildMatches();
-  setProgress(100,"Reconciliation preview ready. Nothing has been updated yet.",true);
-}
-
-/* ========================== MATCHING ENGINE ================================ */
-function prField(rec,key){
-  const f=CONFIG.paymentRequisitionFields[key];
-  return rec ? rec[f] : null;
-}
-
-function paymentRequisitionView(rec){
-  return {
-    id:String(rec.ID||""),
-    po:valueText(prField(rec,"po"),["PO_Number"]),
-    project:valueText(prField(rec,"project"),["Project_Code"]),
-    vendor:valueText(prField(rec,"vendor"),["Vendor_Display_Name","Vendor_Name"]),
-    eligible:cleanAmount(prField(rec,"eligible")),
-    requestDate:valueText(prField(rec,"requestDate")),
-    paymentType:valueText(prField(rec,"paymentType")),
-    requestStatus:valueText(prField(rec,"requestStatus")),
-    raw:rec
-  };
-}
-
-function amountPoints(fileAmount,systemAmount){
-  const diff=Math.abs(fileAmount-systemAmount);
-  const p=amountDiffPct(fileAmount,systemAmount);
-  if(diff<=CONFIG.exactAmountTolerance) return 25;
-  if(p<=0.10) return 24;
-  if(p<=0.50) return 22;
-  if(p<=1) return 20;
-  if(p<=2) return 17;
-  if(p<=5) return 12;
-  if(p<=10) return 6;
-  return 0;
-}
-
-function scoreCandidate(inv,rec){
-  const c=paymentRequisitionView(rec);
-  const poSim=poSimilarity(inv.po,c.po);
-  const vendorSim=vendorSimilarity(inv.vendor,c.vendor);
-  const projectExact=normProject(inv.project)!=="" && normProject(inv.project)===normProject(c.project);
-  const poExact=normPO(inv.po)!=="" && normPO(inv.po)===normPO(c.po);
-  const vendorExact=normVendor(inv.vendor)!=="" && normVendor(inv.vendor)===normVendor(c.vendor);
-  const diff=Math.abs(inv.amount-c.eligible);
-  const diffPct=amountDiffPct(inv.amount,c.eligible);
-
-  let score=0;
-  if(poExact) score+=45;
-  else if(poSim>=.96) score+=40;
-  else if(poSim>=.90) score+=34;
-  else if(poSim>=.80) score+=24;
-  else if(poSim>=.70) score+=14;
-
-  if(vendorExact) score+=25;
-  else score+=Math.round(25*Math.max(0,Math.min(1,vendorSim)));
-
-  score+=amountPoints(inv.amount,c.eligible);
-  if(projectExact) score+=5;
-
-  score=Math.min(100,score);
-
-  const exact = poExact && vendorSim>=.96 && diff<=CONFIG.exactAmountTolerance &&
-    (normProject(inv.project)==="" || projectExact);
-
-  return {
-    rec:c,
-    score,
-    poExact,poSim,vendorExact,vendorSim,projectExact,diff,diffPct,exact
-  };
-}
-
-function reasonForCandidate(inv,c){
-  const p=[];
-  p.push(c.poExact ? "Exact PO match" : `PO similarity ${Math.round(c.poSim*100)}%`);
-  p.push(c.vendorExact ? "Exact normalized vendor match" : `Vendor similarity ${Math.round(c.vendorSim*100)}%`);
-  if(normProject(inv.project)!=="") p.push(c.projectExact ? "Project matched" : "Project differs");
-  p.push(c.diff<=CONFIG.exactAmountTolerance ? "Eligible Payment matched" : `Amount differs by ${money(c.diff)} (${pct(c.diffPct)})`);
-  return p.join(" · ");
-}
-
-function buildMatches(){
-  const all=STATE.paymentRequisitions;
-
-  STATE.results=STATE.importedRows.map((inv,index)=>{
-    const ranked=all
-      .map(rec=>scoreCandidate(inv,rec))
-      .filter(x=>x.poSim>=.45 || x.vendorSim>=.45 || x.projectExact)
-      .sort((a,b)=> b.score-a.score || a.diff-b.diff)
-      .slice(0,CONFIG.candidateCount);
-
-    const best=ranked[0]||null;
-
-    let status="not-found";
-    if(best){
-      if(best.exact) status="matched";
-      else if(best.score>=CONFIG.suggestedMinScore && best.poSim>=.80) status="suggested";
-      else if(best.score>=CONFIG.mismatchMinScore) status="mismatch";
-      else status="not-found";
-    }
-
-    return {
-      index,
-      inv,
-      candidates:ranked,
-      selectedCandidateIndex:best?0:null,
-      status,
-      originalStatus:status,
-      selected:false,
-      accepted:false,
-      rejected:false,
-      updateResult:null,
-      matchSource:best?"Automatic":"None",
-      reason:best?reasonForCandidate(inv,best):"No sufficiently similar Payment Requisition was found."
-    };
-  });
-
-  document.getElementById("statsSection").classList.remove("hidden");
-  document.getElementById("resultsCard").classList.remove("hidden");
-  updateStats();
-  renderTable();
-}
-
-function currentCandidate(r){
-  if(r.selectedCandidateIndex===null || r.selectedCandidateIndex===undefined) return null;
-  return r.candidates[r.selectedCandidateIndex]||null;
-}
-
-function updateStats(){
-  const total=STATE.results.length;
-  const count=s=>STATE.results.filter(r=>r.status===s).length;
-  document.getElementById("sTotal").textContent=total;
-  document.getElementById("sMatched").textContent=count("matched");
-  document.getElementById("sSuggested").textContent=count("suggested");
-  document.getElementById("sMismatch").textContent=count("mismatch");
-  document.getElementById("sNotFound").textContent=count("not-found");
-}
-
-function setFilter(filter,btn){
-  STATE.activeFilter=filter;
-  document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));
-  btn.classList.add("active");
-  renderTable();
-}
-
-function visibleResults(){
-  const q=document.getElementById("resultSearch").value.trim().toUpperCase();
-  return STATE.results.filter(r=>{
-    if(STATE.activeFilter==="accepted"){
-      if(!r.accepted) return false;
-    }else if(STATE.activeFilter!=="all" && r.status!==STATE.activeFilter) return false;
-    if(!q) return true;
-    const c=currentCandidate(r);
-    return [
-      r.inv.po,r.inv.vendor,r.inv.project,
-      c?.rec.po,c?.rec.vendor,c?.rec.project
-    ].join(" ").toUpperCase().includes(q);
-  });
-}
-
-function renderTable(){
-  const body=document.getElementById("resultBody");
-  const rows=visibleResults();
-  body.innerHTML="";
-  document.getElementById("emptyResults").classList.toggle("hidden",rows.length>0);
-
-  for(const r of rows){
-    const c=currentCandidate(r);
-    const tr=document.createElement("tr");
-    tr.className="data-row";
-    tr.innerHTML=`
-      <td><input class="check row-check" type="checkbox" ${r.selected?"checked":""} onchange="toggleRow(${r.index},this.checked)"></td>
-      <td><span class="status ${r.accepted?"accepted":r.status}">${r.accepted?"Accepted":statusLabel(r.status)}</span></td>
-      <td><div class="cell-main">${htmlEscape(r.inv.project||"—")}</div><div class="cell-sub">${c?htmlEscape(c.rec.project||""):""}</div></td>
-      <td><div class="cell-main">${htmlEscape(r.inv.po||"—")}</div><div class="cell-sub">${c?"Creator: "+htmlEscape(c.rec.po||""):"No candidate"}</div></td>
-      <td><div class="cell-main">${htmlEscape(r.inv.vendor||"—")}</div><div class="cell-sub">${c?"Creator: "+htmlEscape(c.rec.vendor||""):""}</div></td>
-      <td class="money">${money(r.inv.amount)}</td>
-      <td class="money">${c?money(c.rec.eligible):"—"}</td>
-      <td class="money">${c?money(c.diff):"—"}${c?`<div class="cell-sub">${pct(c.diffPct)}</div>`:""}</td>
-      <td class="score">${c?c.score:"—"}</td>
-      <td>${htmlEscape(r.matchSource)}</td>
-      <td><button class="link-btn" onclick="openDrawer(${r.index})">Review</button></td>
-    `;
-    body.appendChild(tr);
-  }
-}
-
-function toggleRow(index,checked){ STATE.results[index].selected=checked; }
-function toggleAllVisible(checked){
-  visibleResults().forEach(r=>r.selected=checked);
-  renderTable();
-}
-function selectRecommended(){
-  STATE.results.forEach(r=>{
-    const c=currentCandidate(r);
-    r.selected=!!c && (r.status==="matched" || (r.status==="suggested" && c.score>=CONFIG.strongSelectMinScore));
-  });
-  renderTable();
-}
-
-/* ============================ DRAWER ======================================= */
-function openDrawer(index){
-  STATE.drawerIndex=index;
-  const r=STATE.results[index];
-  const c=currentCandidate(r);
-  document.getElementById("drawerTitle").textContent=`${statusLabel(r.status)} · Row ${r.inv.rowNo}`;
-  document.getElementById("drawerSub").textContent=r.inv.po || "Uploaded payment row";
-  renderDrawerBody();
-  document.getElementById("drawerBackdrop").classList.add("open");
-  document.getElementById("drawer").classList.add("open");
-}
-
-function closeDrawer(){
-  document.getElementById("drawerBackdrop").classList.remove("open");
-  document.getElementById("drawer").classList.remove("open");
-  STATE.drawerIndex=null;
-}
-
-function markSymbol(ok,near){
-  if(ok) return ['yes','✓'];
-  if(near) return ['near','~'];
-  return ['no','✕'];
-}
-
-function renderDrawerBody(){
-  const r=STATE.results[STATE.drawerIndex];
-  const c=currentCandidate(r);
-  const body=document.getElementById("drawerBody");
-
-  let compare="";
-  if(c){
-    const poM=markSymbol(c.poExact,c.poSim>=.90);
-    const vM=markSymbol(c.vendorExact,c.vendorSim>=.85);
-    const pM=markSymbol(c.projectExact,normProject(r.inv.project)==="");
-    const aM=markSymbol(c.diff<=CONFIG.exactAmountTolerance,c.diffPct<=1);
-
-    compare=`
-      <div class="compare">
-        <div class="hdr">Field</div><div class="hdr">Uploaded file</div><div class="hdr">Selected Creator record</div><div class="hdr"></div>
-        <div class="field">PO Number</div><div>${htmlEscape(r.inv.po||"—")}</div><div>${htmlEscape(c.rec.po||"—")}</div><div class="${poM[0]}">${poM[1]}</div>
-        <div class="field">Project Code</div><div>${htmlEscape(r.inv.project||"—")}</div><div>${htmlEscape(c.rec.project||"—")}</div><div class="${pM[0]}">${pM[1]}</div>
-        <div class="field">Vendor</div><div>${htmlEscape(r.inv.vendor||"—")}</div><div>${htmlEscape(c.rec.vendor||"—")}</div><div class="${vM[0]}">${vM[1]}</div>
-        <div class="field">Eligible Payment</div><div>${money(r.inv.amount)}</div><div>${money(c.rec.eligible)}</div><div class="${aM[0]}">${aM[1]}</div>
-      </div>
-      <div class="reason">
-        <b>Match score: ${c.score}/100</b><br>
-        Difference: <b>${money(c.diff)}</b> (${pct(c.diffPct)})<br>
-        ${htmlEscape(reasonForCandidate(r.inv,c))}
-      </div>
-    `;
-  }else{
-    compare=`<div class="reason"><b>No selected Creator record.</b><br>${htmlEscape(r.reason)}</div>`;
-  }
-
-  const candidates=r.candidates.map((x,i)=>`
-    <label class="candidate ${r.selectedCandidateIndex===i?"selected":""}">
-      <input type="radio" name="candidate" ${r.selectedCandidateIndex===i?"checked":""} onchange="chooseCandidate(${i})">
-      <div class="candidate-main">
-        <div class="candidate-top">
-          <div class="candidate-po">${htmlEscape(x.rec.po||"—")}</div>
-          <div class="candidate-score">${x.score}%</div>
-        </div>
-        <div class="candidate-meta">${htmlEscape(x.rec.project||"—")} · ${htmlEscape(x.rec.vendor||"—")}</div>
-        <div class="candidate-meta">${htmlEscape(x.rec.paymentType||"")} ${x.rec.requestDate?"· "+htmlEscape(x.rec.requestDate):""}</div>
-        <div class="candidate-amount">${money(x.rec.eligible)} · diff ${money(x.diff)}</div>
-      </div>
-    </label>
-  `).join("");
-
-  body.innerHTML=`
-    <div class="section-title">Uploaded row vs selected match</div>
-    <div class="section-sub">You can change the selected Payment Requisition before accepting.</div>
-    ${compare}
-
-    <div class="candidate-head">
-      <div class="candidate-title">Similar Payment Requisitions</div>
-      <span class="cell-sub">${r.candidates.length} candidate(s)</span>
-    </div>
-    ${candidates || '<div class="empty">No candidate loaded yet.</div>'}
-
-    <div class="candidate-title" style="margin-top:16px">Search loaded Payment Requisitions</div>
-    <div class="manual-search">
-      <input id="manualCandidateSearch" placeholder="Search PO / vendor / project / amount..." oninput="renderManualCandidates()">
-    </div>
-    <div id="manualCandidates"></div>
-
-    <div class="reason">
-      <b>What happens on Accept:</b> a new record is created in <b>Payment_detals2</b>
-      and linked to the selected Payment Requisition. The uploaded bank amount becomes <b>Payment Done</b>. When present in the Excel row,
-      Payment Record Date, Bank Name, Paid Through, Account Number, UTR No,
-      Transaction ID, Cheque No and Remark / Note are also passed to the new Payment Details record.
-    </div>
-  `;
-
-  document.getElementById("acceptCurrentBtn").disabled=!currentCandidate(r);
-}
-
-function chooseCandidate(candidateIndex){
-  const r=STATE.results[STATE.drawerIndex];
-  r.selectedCandidateIndex=candidateIndex;
-  r.matchSource=candidateIndex===0?"Automatic":"User Selected";
-  const c=currentCandidate(r);
-  if(c){
-    if(c.exact) r.status="matched";
-    else if(c.score>=CONFIG.suggestedMinScore && c.poSim>=.80) r.status="suggested";
-    else if(c.score>=CONFIG.mismatchMinScore) r.status="mismatch";
-    else r.status="not-found";
-    r.reason=reasonForCandidate(r.inv,c);
-  }
-  updateStats();
-  renderTable();
-  renderDrawerBody();
-}
-
-function renderManualCandidates(){
-  const q=(document.getElementById("manualCandidateSearch")?.value||"").trim().toUpperCase();
-  const out=document.getElementById("manualCandidates");
-  if(!q){out.innerHTML="";return}
-
-  const r=STATE.results[STATE.drawerIndex];
-  const found=STATE.paymentRequisitions
-    .map(rec=>scoreCandidate(r.inv,rec))
-    .filter(x=>[
-      x.rec.po,x.rec.vendor,x.rec.project,String(x.rec.eligible)
-    ].join(" ").toUpperCase().includes(q))
-    .sort((a,b)=>b.score-a.score||a.diff-b.diff)
-    .slice(0,10);
-
-  out.innerHTML=found.map(x=>`
-    <div class="candidate">
-      <div class="candidate-main">
-        <div class="candidate-top"><div class="candidate-po">${htmlEscape(x.rec.po||"—")}</div><div class="candidate-score">${x.score}%</div></div>
-        <div class="candidate-meta">${htmlEscape(x.rec.project||"—")} · ${htmlEscape(x.rec.vendor||"—")}</div>
-        <div class="candidate-amount">${money(x.rec.eligible)} · diff ${money(x.diff)}</div>
-      </div>
-      <button class="btn small" onclick='addManualCandidate(${JSON.stringify(x.rec.id)})'>Select</button>
-    </div>
-  `).join("") || '<div class="empty">No loaded Payment Requisition matches that search.</div>';
-}
-
-function addManualCandidate(id){
-  const r=STATE.results[STATE.drawerIndex];
-  const rec=STATE.paymentRequisitions.find(x=>String(x.ID)===String(id));
-  if(!rec) return;
-  const scored=scoreCandidate(r.inv,rec);
-  const existingIndex=r.candidates.findIndex(x=>x.rec.id===scored.rec.id);
-  if(existingIndex>=0){
-    chooseCandidate(existingIndex);
-    return;
-  }
-  r.candidates.push(scored);
-  r.selectedCandidateIndex=r.candidates.length-1;
-  r.matchSource="User Selected";
-  chooseCandidate(r.selectedCandidateIndex);
-}
-
-function rejectCurrent(){
-  const r=STATE.results[STATE.drawerIndex];
-  r.rejected=true;
-  r.selected=false;
-  r.status="mismatch";
-  r.matchSource="Rejected by User";
-  r.reason="User rejected the suggested match.";
-  updateStats();renderTable();closeDrawer();
-  toast("Match rejected. No Creator record was changed.");
-}
-
-
-/* ===================== CREATOR FIELD/FETCH HELPERS ========================= */
-function canonicalKey(v){
-  return String(v||"")
-    .toLowerCase()
-    .replace(/[₹$€£]/g,"")
-    .replace(/[^a-z0-9]+/g,"")
-    .trim();
-}
-
-function resolveExistingKey(record,candidates){
-  if(!record) return null;
-  const keys=Object.keys(record);
-  const wanted=(candidates||[]).map(canonicalKey);
-
-  for(const w of wanted){
-    const exact=keys.find(k=>canonicalKey(k)===w);
-    if(exact) return exact;
-  }
-  return null;
-}
-
-function creatorScalar(v){
-  if(v===null || v===undefined) return null;
-  if(typeof v==="object"){
-    if(v.ID!==undefined && v.ID!==null) return v.ID;
-    if(v.id!==undefined && v.id!==null) return v.id;
-    const s=valueText(v);
-    return s==="" ? null : s;
-  }
-  return v;
-}
-
-async function getFreshPaymentRequisitionById(id){
-  try{
-    if(ZOHO.CREATOR.DATA.getRecordById){
-      const res=await ZOHO.CREATOR.DATA.getRecordById({
-        app_name:CONFIG.appName,
-        report_name:CONFIG.paymentRequisitionReport,
-        id:String(id)
-      });
-      if(res && res.data) return res.data;
-    }
-  }catch(err){
-    console.warn("getRecordById failed; using cached Payment Requisition row.",err);
-  }
-
-  const cached=STATE.paymentRequisitions.find(r=>String(r.ID)===String(id));
-  return cached || null;
-}
-
-function putIfTargetExists(data,targetSample,targetAliases,value){
-  if(value===null || value===undefined || String(valueText(value)).trim()==="") return false;
-  const targetKey=resolveExistingKey(targetSample,targetAliases);
-  if(!targetKey) return false;
-  data[targetKey]=creatorScalar(value);
-  return true;
-}
-
-function copySameNamedFieldsFromPR(prRaw,targetSample,data){
-  if(!prRaw || !targetSample) return;
-
-  const blocked=new Set([
-    "id","addedtime","modifiedtime","addeduser","modifieduser",
-    "autonumber","recordtype","reconciliationstatus",
-    "paymentdetails","paymentdocument",
-    "amountdifference","differencepercentage","matchscore","matchremarks",
-    "reconciledon","importbatch","importedamount",
-    "utrno","transactionid","chequeno","accountnumber","bankname","paidthrough"
-  ]);
-
-  const targetKeys=Object.keys(targetSample);
-  for(const tk of targetKeys){
-    const ck=canonicalKey(tk);
-    if(blocked.has(ck)) continue;
-    if(data[tk]!==undefined) continue;
-
-    const sourceKey=Object.keys(prRaw).find(sk=>canonicalKey(sk)===ck);
-    if(!sourceKey) continue;
-
-    const value=prRaw[sourceKey];
-    if(value===null || value===undefined || String(valueText(value)).trim()==="") continue;
-    data[tk]=creatorScalar(value);
-  }
-}
-
-
-function representativeFieldValue(fieldName){
-  for(const rec of STATE.paymentDetails){
-    const v=rec ? rec[fieldName] : null;
-    if(v!==null && v!==undefined && String(valueText(v)).trim()!=="") return v;
-  }
-  return null;
-}
-
-function resolveChoiceOrLookupValue(fieldName, uploadedValue){
-  const rawText=String(uploadedValue??"").trim();
-  if(!rawText) return null;
-
-  const sample=representativeFieldValue(fieldName);
-
-  // Lookup field: resolve Excel display text to an existing Creator lookup ID.
-  if(sample && typeof sample==="object" && (sample.ID!==undefined || sample.id!==undefined)){
-    const wanted=canonicalHeader(rawText);
-    for(const rec of STATE.paymentDetails){
-      const v=rec ? rec[fieldName] : null;
-      if(!v || typeof v!=="object") continue;
-      if(canonicalHeader(valueText(v))===wanted){
-        return v.ID || v.id;
-      }
-    }
-    return null;
-  }
-
-  // Dropdown / radio / single-line: preserve Creator capitalization if known.
-  const wanted=canonicalHeader(rawText);
-  for(const rec of STATE.paymentDetails){
-    const v=rec ? rec[fieldName] : null;
-    const shown=valueText(v);
-    if(shown && canonicalHeader(shown)===wanted) return shown;
-  }
-
-  return rawText;
-}
-
-function todayForCreator(){
-  const d=new Date();
-  const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];
-  const pad=x=>String(x).padStart(2,"0");
-  return `${pad(d.getDate())}-${m}-${d.getFullYear()}`;
-}
-
-/* ======================= PAYMENT DETAILS CREATION =========================== */
-function firstRawValue(raw,names){
-  for(const n of names){
-    if(raw && raw[n] !== undefined && raw[n] !== null && String(valueText(raw[n])).trim()!==""){
-      return raw[n];
-    }
-  }
-  return null;
-}
-
-function pdView(rec){
-  const f=CONFIG.paymentDetailsFields;
-  return {
-    id:String(rec.ID||""),
-    po:valueText(rec[f.po],["PO_Number","PO_No"]),
-    vendor:valueText(rec[f.vendor],["Vendor_Display_Name","Vendor_Name"]),
-    paymentType:valueText(rec[f.paymentType]),
-    utr:valueText(rec[f.utr]),
-    transactionId:valueText(rec[f.transactionId]),
-    paymentRequisitionId:lookupId(rec[f.paymentRequisition]),
-    paymentDone:cleanAmount(rec[f.paymentDone]),
-    raw:rec
-  };
-}
-
-function findDuplicatePaymentDetail(result){
-  const uploadedUTR=String(result.inv.utr||"").trim().toUpperCase();
-  const uploadedTxn=String(result.inv.transactionId||"").trim().toUpperCase();
-
-  for(const rec of STATE.paymentDetails){
-    const d=pdView(rec);
-    if(uploadedUTR && String(d.utr||"").trim().toUpperCase()===uploadedUTR){
-      return {record:d,reason:"Same UTR No already exists"};
-    }
-    if(uploadedTxn && String(d.transactionId||"").trim().toUpperCase()===uploadedTxn){
-      return {record:d,reason:"Same Transaction ID already exists"};
-    }
-  }
-  return null;
-}
-
-async function createPaymentDetail(result){
+async function getRecords(reportName, cursor){
   assertCreator();
-  const c=currentCandidate(result);
-  if(!c) throw new Error("No Payment Requisition is selected.");
-
-  const duplicate=findDuplicatePaymentDetail(result);
-  if(duplicate){
-    throw new Error(`${duplicate.reason} in Payment Details (record ${duplicate.record.id}). Record was not created again.`);
+  const cfg={app_name:CONFIG.appName,report_name:reportName,max_records:1000,field_config:"all"};
+  if(cursor) cfg.record_cursor=cursor;
+  const res=await ZOHO.CREATOR.DATA.getRecords(cfg);
+  if(res && res.code && res.code!==3000){
+    const errs=Array.isArray(res.error)?res.error.join(" | "):"";
+    throw new Error(errs || res.message || JSON.stringify(res));
   }
-
-  // Fetch the selected PR again at Accept time so we use the latest Creator data.
-  const prRaw=(await getFreshPaymentRequisitionById(c.rec.id)) || c.rec.raw || {};
-  const f=CONFIG.paymentDetailsFields;
-
-  const targetSample=STATE.paymentDetails[0] || {};
-
-  // Required lookup IDs from Payment Requisition.
-  const poRaw=prRaw[CONFIG.paymentRequisitionFields.po];
-  const vendorRaw=prRaw[CONFIG.paymentRequisitionFields.vendor];
-  const poId=lookupId(poRaw);
-  const vendorId=lookupId(vendorRaw);
-
-  if(!poId) throw new Error("Selected Payment Requisition did not return a PO lookup ID.");
-  if(!vendorId) throw new Error("Selected Payment Requisition did not return a Vendor lookup ID.");
-
-  const data={};
-
-  // -----------------------------------------------------------------------
-  // 1) CORE LINKAGES
-  // -----------------------------------------------------------------------
-  data[f.paymentRequisition]=c.rec.id;
-  data[f.po]=poId;
-  data[f.vendor]=vendorId;
-
-  // -----------------------------------------------------------------------
-  // 2) COPY ALL SAME-LINK-NAME VALUES THAT EXIST IN BOTH FORMS
-  //    This automatically brings across direct PR details without having to
-  //    hard-code every current/future field.
-  // -----------------------------------------------------------------------
-  copySameNamedFieldsFromPR(prRaw,targetSample,data);
-
-  // -----------------------------------------------------------------------
-  // 3) EXPLICIT COMMON PR -> PAYMENT DETAILS MAPPING
-  //    These alias lists cover common link-name differences between forms.
-  // -----------------------------------------------------------------------
-  putIfTargetExists(
-    data,targetSample,
-    ["Payment_Record_Date","PaymentRecordDate"],
-    String(result.inv.paymentRecordDate||"").trim() || todayForCreator()
-  );
-
-  putIfTargetExists(
-    data,targetSample,
-    ["Payment_Request_Date","PaymentRequestDate"],
-    prRaw[CONFIG.paymentRequisitionFields.requestDate]
-  );
-
-  putIfTargetExists(
-    data,targetSample,
-    ["Payment_Type","PaymentType"],
-    prRaw[CONFIG.paymentRequisitionFields.paymentType]
-  );
-
-  putIfTargetExists(
-    data,targetSample,
-    ["Payment_Request_Status","PaymentRequestStatus"],
-    firstRawValue(prRaw,["Payment_Request_Status","Request_Status","Status"])
-  );
-
-  putIfTargetExists(
-    data,targetSample,
-    ["Currency_Name","Currency"],
-    firstRawValue(prRaw,["Currency_Name","Currency","Currency_Type"])
-  );
-
-  putIfTargetExists(
-    data,targetSample,
-    ["Request_Basic_Amount","Basic","Subtotal","Sub_Total"],
-    firstRawValue(prRaw,["Basic","Request_Basic_Amount","Subtotal","Sub_Total"])
-  );
-
-  putIfTargetExists(
-    data,targetSample,
-    ["Approved_Amount","Total","Payable_Amount"],
-    firstRawValue(prRaw,["Approved_Amount","Total","Payable_Amount"])
-  );
-
-  putIfTargetExists(
-    data,targetSample,
-    ["Percentage","Payment_Percentage","Payment"],
-    firstRawValue(prRaw,["Percentage","Payment_Percentage","Payment"])
-  );
-
-  // Direct tax / deduction / running values are copied when they actually
-  // exist in the selected Payment Requisition.
-  [
-    ["Running_IGST",["Running_IGST","IGST"]],
-    ["Running_CGST",["Running_CGST","CGST"]],
-    ["Running_SGST",["Running_SGST","SGST"]],
-    ["Running_Total",["Running_Total"]],
-    ["Deduction_from_Advance",["Deduction_from_Advance","Deduction_From_Advance"]],
-    ["Deduction_From_Retention",["Deduction_From_Retention","Deduction_from_Retention"]],
-    ["Total_Deduction",["Total_Deduction"]],
-    ["Running_PO",["Running_PO"]],
-    ["Previous_Remaining_From_Request",["Previous_Remaining_From_Request"]],
-    ["Remaning_Against_PO",["Remaning_Against_PO","Remaining_Against_PO"]]
-  ].forEach(([targetAlias,sourceAliases])=>{
-    putIfTargetExists(data,targetSample,[targetAlias],firstRawValue(prRaw,sourceAliases));
-  });
-
-  // USD/direct alternate-currency values: only copied if Creator returns them.
-  [
-    [["Approved_Amount","Approved_Amount_USD","Approved_Amount_Dollar"],["Approved_Amount_USD","Approved_Amount_Dollar","Total_USD"]],
-    [["Request_Basic_Amount_USD","Request_Basic_Amount_Dollar"],["Request_Basic_Amount_USD","Basic_USD"]],
-    [["Running_IGST_USD","Running_IGST_Dollar"],["Running_IGST_USD"]],
-    [["Running_Total_USD","Running_Total_Dollar"],["Running_Total_USD"]],
-    [["Deduction_from_Advance_USD","Deduction_from_Advance_Dollar"],["Deduction_from_Advance_USD"]],
-    [["Deduction_From_Retention_USD","Deduction_From_Retention_Dollar"],["Deduction_From_Retention_USD"]],
-    [["Total_Deduction_USD","Total_Deduction_Dollar"],["Total_Deduction_USD"]],
-    [["Eligible_Payable_Amount_USD","Eligible_Payable_Amount_Dollar"],["Eligible_Payment_USD","Eligible_Payable_Amount_USD"]],
-    [["Running_PO_USD","Running_PO_Dollar"],["Running_PO_USD"]],
-    [["Previous_Remaining_From_Request_USD","Previous_Remaining_From_Request_Dollar"],["Previous_Remaining_From_Request_USD"]]
-  ].forEach(([targetAliases,sourceAliases])=>{
-    putIfTargetExists(data,targetSample,targetAliases,firstRawValue(prRaw,sourceAliases));
-  });
-
-  // -----------------------------------------------------------------------
-  // 4) RECONCILIATION / BANK PAYMENT VALUES
-  // -----------------------------------------------------------------------
-  data[f.eligiblePayableAmount]=Number(c.rec.eligible||0);
-  data[f.paymentDone]=Number(result.inv.amount||0);
-
-  // Safe derived values that do not depend on historic running calculations.
-  const remaining=round2(Number(c.rec.eligible||0)-Number(result.inv.amount||0));
-  putIfTargetExists(data,targetSample,["Remaining_Amount","RemainingAmount"],remaining);
-  putIfTargetExists(data,targetSample,["Last_Payment","LastPayment"],Math.abs(remaining)<=CONFIG.exactAmountTolerance);
-
-  // Uploaded bank/payment method details, when present.
-  if(String(result.inv.bankName||"").trim()){
-    const resolvedBank=resolveChoiceOrLookupValue(f.bankName,result.inv.bankName);
-    if(resolvedBank!==null){
-      data[f.bankName]=resolvedBank;
-    }
-  }
-
-  if(String(result.inv.paidThrough||"").trim()){
-    const resolvedPaidThrough=resolveChoiceOrLookupValue(f.paidThrough,result.inv.paidThrough);
-    if(resolvedPaidThrough!==null){
-      data[f.paidThrough]=resolvedPaidThrough;
-    }
-  }
-
-  if(String(result.inv.utr||"").trim()) data[f.utr]=String(result.inv.utr).trim();
-  if(String(result.inv.transactionId||"").trim()) data[f.transactionId]=String(result.inv.transactionId).trim();
-  if(String(result.inv.accountNumber||"").trim()) data[f.accountNumber]=String(result.inv.accountNumber).trim();
-  if(String(result.inv.chequeNo||"").trim()) data[f.chequeNo]=String(result.inv.chequeNo).trim();
-
-  // Match audit
-  data[f.importedAmount]=round2(result.inv.amount||0);
-
-  const safeDifference=round2(c.diff||0);
-  if(Math.abs(safeDifference) <= CONFIG.amountDifferenceMax){
-    data[f.amountDifference]=safeDifference;
-  }
-
-  data[f.differencePercentage]=round2(c.diffPct||0);
-  data[f.matchScore]=Number(c.score||0);
-  data[f.reconciledOn]=dateTimeForCreator();
-
-  const remarks=[
-    "Created from Payment Reconciliation Widget.",
-    `Match Source: ${result.matchSource}.`,
-    `Uploaded PO: ${result.inv.po}.`,
-    `Uploaded Vendor: ${result.inv.vendor}.`,
-    `Uploaded Bank Amount: ${result.inv.amount}.`,
-    result.inv.bankName ? `Bank Name: ${result.inv.bankName}.` : "",
-    result.inv.paidThrough ? `Paid Through: ${result.inv.paidThrough}.` : "",
-    result.inv.accountNumber ? `Account Number: ${result.inv.accountNumber}.` : "",
-    result.inv.utr ? `UTR: ${result.inv.utr}.` : "",
-    result.inv.transactionId ? `Transaction ID: ${result.inv.transactionId}.` : "",
-    result.inv.chequeNo ? `Cheque No: ${result.inv.chequeNo}.` : "",
-    `Matched Payment Requisition ID: ${c.rec.id}.`,
-    `Eligible Payment: ${c.rec.eligible}.`,
-    `Original Widget Classification: ${statusLabel(result.status)}.`,
-    `Difference: ${round2(c.diff)}.`,
-    Math.abs(round2(c.diff)) > CONFIG.amountDifferenceMax
-      ? "Amount Difference was too large for the Creator Amount_Difference field and was retained in Match Remarks only."
-      : "",
-    `Score: ${c.score}/100.`,
-    reasonForCandidate(result.inv,c),
-    result.inv.remark ? `Imported Note: ${result.inv.remark}` : ""
-  ].filter(Boolean).join(" ");
-
-  data[f.matchRemarks]=remarks;
-  if(String(result.inv.remark||"").trim()) data[f.remarkNote]=String(result.inv.remark).trim();
-
-  // -----------------------------------------------------------------------
-  // IMPORTANT:
-  // v9 still skips Form Workflows because your current Payment_detals2
-  // workflow is assigning an invalid Reconciliation_Status value.
-  // Therefore we fetch/copy direct values here. Running fields that require
-  // your existing historical-calculation workflow may still remain blank
-  // until that Creator workflow is corrected and re-enabled.
-  // -----------------------------------------------------------------------
-  const cfg={
-    app_name:CONFIG.appName,
-    form_name:CONFIG.paymentDetailsForm,
-    payload:{
-      data:data,
-      skip_workflow:["form_workflow"]
-    }
-  };
-
-  console.log("Build v9 Payment_detals2 payload:",cfg);
-
-  const response=await ZOHO.CREATOR.DATA.addRecords(cfg);
-  if(response && response.code && response.code!==3000){
-    const creatorErrors=Array.isArray(response.error)?response.error.join(" | "):"";
-    throw new Error(creatorErrors || response.message || JSON.stringify(response));
-  }
-
-  const newId=String(response?.data?.ID || "");
-  result.accepted=true;
-  result.selected=false;
-  result.updateResult={paymentDetailId:newId,response};
-  result.matchSource=result.matchSource==="Automatic"?"Automatic Accepted":"User Selected";
-
-  STATE.paymentDetails.push(Object.assign({ID:newId},data));
-  return {id:newId,response,data};
+  return res || {data:[]};
 }
-
-async function acceptCurrent(){
-  if(STATE.drawerIndex===null) return;
-  const r=STATE.results[STATE.drawerIndex];
+function extractRecordCursor(res){
+  if(!res) return "";
+  const direct=res.record_cursor||res.recordCursor||res.next_record_cursor||res.nextRecordCursor||
+    res.info?.record_cursor||res.info?.recordCursor||res.meta?.record_cursor||res.meta?.recordCursor||
+    res.header?.record_cursor||res.headers?.record_cursor||res.response?.record_cursor||res.response?.headers?.record_cursor;
+  if(direct) return String(direct);
   try{
-    document.getElementById("acceptCurrentBtn").disabled=true;
-    const created=await createPaymentDetail(r);
-    toast(`Payment Details record ${created.id || "created"} successfully.`,"success");
-    renderTable();closeDrawer();
-  }catch(err){
-    toast(err.message||String(err),"error");
-    document.getElementById("acceptCurrentBtn").disabled=false;
-  }
-}
-
-async function acceptSelected(){
-  const selected=STATE.results.filter(r=>r.selected && !r.accepted && currentCandidate(r));
-  if(!selected.length){toast("Select at least one matched/suggested row first.");return}
-
-  let ok=0,fail=0;
-  for(let i=0;i<selected.length;i++){
-    try{
-      setProgress(Math.round((i/selected.length)*100),`Creating Payment Details ${i+1} of ${selected.length}...`,true);
-      await createPaymentDetail(selected[i]);
-      ok++;
-    }catch(err){
-      fail++;
-      selected[i].updateResult={error:err.message||String(err)};
+    if(res.headers && typeof res.headers.get==="function"){
+      const h=res.headers.get("record_cursor")||res.headers.get("record-cursor");
+      if(h) return String(h);
     }
+  }catch(_e){}
+  return "";
+}
+async function getAllRecords(reportName,label){
+  const all=[], seen=new Set(); let cursor="";
+  while(true){
+    setConnection(true,`${label||reportName}: ${all.length.toLocaleString("en-IN")} loaded...`);
+    const res=await getRecords(reportName,cursor||undefined);
+    const batch=Array.isArray(res.data)?res.data:[];
+    all.push(...batch);
+    const next=extractRecordCursor(res);
+    if(!next) break;
+    if(seen.has(next)) throw new Error(`Creator returned a repeated record cursor while loading ${reportName}. Stopped after ${all.length} records.`);
+    seen.add(next); cursor=next;
+    await new Promise(r=>setTimeout(r,25));
   }
-  setProgress(100,`Creation finished: ${ok} created, ${fail} failed.`,true);
-  renderTable();
-  toast(`Created ${ok} Payment Details record(s). ${fail?fail+" failed.":""}`,fail?"error":"success");
+  // Safety: Creator pages are 1000 rows. A total that is an exact multiple of
+  // 1000 with no cursor seen means the cursor may not have been returned.
+  if(all.length>0 && all.length%1000===0){
+    STATE.warnings.push(`${reportName} returned exactly ${all.length.toLocaleString("en-IN")} records. If the report has more rows, the record cursor was not returned and some data may be missing.`);
+  }
+  return all;
+}
+/* ============================ LOAD + MODEL ================================ */
+async function loadAll(){
+  STATE.warnings=[];
+  STATE.poRaw=await getAllRecords(CONFIG.poReport,"Loading Purchase Orders");
+  STATE.prRaw=await getAllRecords(CONFIG.requisitionReport,"Loading Payment Requisitions");
+  STATE.pdRaw=await getAllRecords(CONFIG.paymentReport,"Loading Payment Details");
+  STATE.grnRaw=CONFIG.grn.report ? await getAllRecords(CONFIG.grn.report,"Loading GRN records") : [];
 }
 
+function unionKeys(rows,limit){
+  const set=new Set();
+  rows.slice(0,limit||60).forEach(r=>Object.keys(r||{}).forEach(k=>set.add(k)));
+  return [...set];
+}
+function pickKey(keys,candidates){
+  for(const c of candidates){
+    const hit=keys.find(k=>canonicalKey(k)===canonicalKey(c));
+    if(hit) return hit;
+  }
+  return null;
+}
 
-/* ================================ EXPORT =================================== */
-function csvCell(v){return '"'+String(v??"").replace(/"/g,'""')+'"'}
-function exportResults(){
-  if(!STATE.results.length){toast("No reconciliation results to export.");return}
-  const head=["Row","Project","PO No","Vendor","File Amount","Creator PO","Creator Vendor","Creator Eligible Payment","Difference","Difference %","Score","Status","Match Source","Payment Requisition ID","Payment Detail Created ID","Update Error"];
-  const lines=[head.map(csvCell).join(",")];
-  STATE.results.forEach(r=>{
-    const c=currentCandidate(r);
-    lines.push([
-      r.inv.rowNo,r.inv.project,r.inv.po,r.inv.vendor,r.inv.amount,
-      c?.rec.po||"",c?.rec.vendor||"",c?.rec.eligible??"",
-      c?.diff??"",c?.diffPct??"",c?.score??"",
-      r.accepted?"Accepted":statusLabel(r.status),r.matchSource,c?.rec.id||"",
-      r.updateResult?.paymentDetailId||"",r.updateResult?.error||""
-    ].map(csvCell).join(","));
+function buildModel(){
+  const tol=CONFIG.tolerance;
+  const poKeys=unionKeys(STATE.poRaw);
+  const K={};
+  Object.keys(CONFIG.poFields).forEach(n=>{ K[n]=pickKey(poKeys,CONFIG.poFields[n]); });
+  STATE.keys=K;
+
+  const pos=[], byId={}, byKey={};
+  STATE.poRaw.forEach(rec=>{
+    const id=String(rec.ID||"");
+    const no=K.po ? valueText(rec[K.po],["PO_Number","PO_No"]) : "";
+    const vendor=K.vendor ? valueText(rec[K.vendor],["Vendor_Display_Name","Vendor_Name"]) : "";
+    const po={
+      id, no:no||("PO "+id), vendor:vendor||"(No vendor)",
+      project:(K.project?valueText(rec[K.project],["Project_Code"]):"")||"(No project)",
+      amount:K.amount?cleanAmount(rec[K.amount]):0,
+      date:K.date?parseDate(rec[K.date]):null,
+      grn:{known:false,received:false,text:""},
+      reqs:[], pays:[], ignoredReqs:0,
+      requested:0, paid:0, raw:rec
+    };
+    pos.push(po);
+    if(id) byId[id]=po;
+    if(no) byKey[normKey(no)]=po;
   });
-  const blob=new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
+
+  // Payment Requisitions
+  const ignore=CONFIG.ignoreRequisitionStatuses.map(s=>s.toLowerCase());
+  const prById={}; let orphanPR=0, orphanPD=0;
+  const R=CONFIG.requisitionFields;
+  STATE.prRaw.forEach(rec=>{
+    const status=valueText(rec[R.status]).trim();
+    const poRef=rec[R.po];
+    const po=byId[lookupId(poRef)] || byKey[normKey(valueText(poRef,["PO_Number","PO_No"]))];
+    if(!po){ orphanPR++; return; }
+    if(ignore.includes(status.toLowerCase())){ po.ignoredReqs++; return; }
+    const pr={
+      id:String(rec.ID||""), po,
+      date:parseDate(rec[R.date]), type:valueText(rec[R.type]), status,
+      eligible:cleanAmount(rec[R.eligible]), pays:[], paid:0
+    };
+    po.reqs.push(pr);
+    if(pr.id) prById[pr.id]=pr;
+  });
+
+  // Payment Details
+  const P=CONFIG.paymentFields;
+  STATE.pdRaw.forEach(rec=>{
+    const prId=lookupId(rec[P.requisition]);
+    const pr=prById[prId]||null;
+    const po=pr ? pr.po : (byId[lookupId(rec[P.po])] || byKey[normKey(valueText(rec[P.po],["PO_Number","PO_No"]))]);
+    if(!po){ orphanPD++; return; }
+    const pd={
+      id:String(rec.ID||""), po, pr,
+      date:parseDate(rec[P.date]), type:valueText(rec[P.type]),
+      done:cleanAmount(rec[P.done]),
+      utr:valueText(rec[P.utr]), txn:valueText(rec[P.txn]),
+      bank:valueText(rec[P.bank]), paidThrough:valueText(rec[P.paidThrough])
+    };
+    po.pays.push(pd);
+    if(pr) pr.pays.push(pd);
+  });
+
+  // GRN
+  const rv=CONFIG.grn.receivedValues.map(s=>s.toLowerCase());
+  const isReceived=t=>rv.includes(String(t||"").trim().toLowerCase());
+  if(CONFIG.grn.report){
+    const map={};
+    STATE.grnRaw.forEach(rec=>{
+      const ref=rec[CONFIG.grn.poField];
+      const po=byId[lookupId(ref)] || byKey[normKey(valueText(ref,["PO_Number","PO_No"]))];
+      if(!po) return;
+      (map[po.id]=map[po.id]||[]).push(rec);
+    });
+    pos.forEach(po=>{
+      const rows=map[po.id]||[];
+      let received=rows.length>0;
+      let texts=[];
+      if(CONFIG.grn.statusField){
+        texts=rows.map(r=>valueText(r[CONFIG.grn.statusField]));
+        received=texts.some(isReceived);
+      }
+      po.grn={known:true,received,text:rows.length?(texts.filter(Boolean).join(", ")||rows.length+" GRN"):"No GRN"};
+    });
+  }else if(K.grn){
+    pos.forEach(po=>{
+      const t=valueText(po.raw[K.grn]).trim();
+      po.grn={known:true,received:isReceived(t)||t.toLowerCase()==="true",text:t||"Pending"};
+    });
+  }
+
+  // Totals
+  pos.forEach(po=>{
+    po.reqs.forEach(pr=>{ pr.paid=round2(pr.pays.reduce((s,p)=>s+p.done,0)); });
+    po.requested=round2(po.reqs.reduce((s,p)=>s+p.eligible,0));
+    po.paid=round2(po.pays.reduce((s,p)=>s+p.done,0));
+    po.balance=round2(po.amount-po.paid);
+    po.pctPaid=po.amount>0 ? (po.paid/po.amount)*100 : 0;
+    po.lastPayment=po.pays.reduce((d,p)=>(p.date&&(!d||p.date>d))?p.date:d,null);
+  });
+
+  STATE.model={pos,orphanPR,orphanPD,tol};
+}
+
+/* ============================ FILTERS + REPORTS =========================== */
+function currentFilters(){
+  return {
+    q:document.getElementById("fSearch").value.trim().toUpperCase(),
+    project:document.getElementById("fProject").value,
+    vendor:document.getElementById("fVendor").value
+  };
+}
+function poMatchesFilters(po,f){
+  if(f.project && po.project!==f.project) return false;
+  if(f.vendor && po.vendor!==f.vendor) return false;
+  if(!f.q) return true;
+  const hay=[po.no,po.vendor,po.project].concat(po.pays.map(p=>p.utr+" "+p.txn)).join(" ").toUpperCase();
+  return hay.includes(f.q);
+}
+function groupBy(pos,keyName){
+  const map=new Map();
+  pos.forEach(po=>{
+    const k=po[keyName];
+    if(!map.has(k)) map.set(k,{name:k,pos:[],value:0,requested:0,paid:0,excess:0,balance:0,awaiting:0,pending:0,notRecorded:0});
+    const g=map.get(k);
+    g.pos.push(po); g.value+=po.amount; g.requested+=po.requested; g.paid+=po.paid;
+    if(po.amount>0){
+      if(po.paid-po.amount>STATE.model.tol) g.excess+=po.paid-po.amount;
+      else g.balance+=Math.max(0,po.amount-po.paid);
+    }
+    if(!po.reqs.length && !po.pays.length) g.awaiting++;
+    if(po.paid>STATE.model.tol && po.amount>0 && po.amount-po.paid>STATE.model.tol) g.pending++;
+    g.notRecorded+=po.reqs.filter(pr=>pr.eligible>STATE.model.tol && !pr.pays.length).length;
+  });
+  return [...map.values()].sort((a,b)=>b.paid-a.paid||a.name.localeCompare(b.name));
+}
+function computeReports(pos){
+  const tol=STATE.model.tol;
+  const R={awaiting:[],notRecorded:[],pending:[],excess:[],done:[],grn:[]};
+  pos.forEach(po=>{
+    if(!po.reqs.length && !po.pays.length) R.awaiting.push(po);
+    po.reqs.forEach(pr=>{
+      if(pr.eligible>tol && !pr.pays.length) R.notRecorded.push({po,pr});
+      if(pr.pays.length && pr.paid-pr.eligible>tol){
+        R.excess.push({level:"Requisition",po,pr,ref:pr.eligible,paid:pr.paid,excess:round2(pr.paid-pr.eligible)});
+      }
+    });
+    if(po.amount>0 && po.paid-po.amount>tol){
+      R.excess.push({level:"PO",po,pr:null,ref:po.amount,paid:po.paid,excess:round2(po.paid-po.amount)});
+    }
+    if(po.paid>tol && po.amount>0 && po.amount-po.paid>tol) R.pending.push(po);
+    if(po.pays.length) R.done.push(po);
+    if(po.paid>tol && po.grn.known && !po.grn.received) R.grn.push(po);
+  });
+  R.vendor=groupBy(pos,"vendor");
+  R.project=groupBy(pos,"project");
+  return R;
+}
+function refreshFilterOptions(){
+  const pos=STATE.model.pos;
+  const fill=(id,label,values)=>{
+    const el=document.getElementById(id), cur=el.value;
+    el.innerHTML=`<option value="">${label}</option>`+values.map(v=>`<option value="${htmlEscape(v)}">${htmlEscape(v)}</option>`).join("");
+    if(values.includes(cur)) el.value=cur;
+  };
+  fill("fProject","All Projects",[...new Set(pos.map(p=>p.project))].sort());
+  fill("fVendor","All Vendors",[...new Set(pos.map(p=>p.vendor))].sort());
+}
+/* ============================ REPORT DEFINITIONS ========================== */
+const T=()=>STATE.model.tol;
+
+function poCell(po){ return `<div class="main">${htmlEscape(po.no)}</div><div class="sub">${po.date?fmtDate(po.date):""}</div>`; }
+function vendorCell(po){ return `<div class="main">${htmlEscape(po.vendor)}</div>`; }
+function projectCell(po){ return htmlEscape(po.project); }
+function barCell(p){
+  const w=Math.max(0,Math.min(100,p));
+  return `<div style="display:flex;align-items:center;gap:7px"><div class="bar ${p>100+0.001?"over":""}" style="flex:1"><i style="width:${w}%"></i></div><span style="font-weight:800;min-width:42px;text-align:right">${pct(p)}</span></div>`;
+}
+function poStatus(po){
+  const tol=T();
+  if(po.amount<=0) return {c:"gray",t:"PO amount missing"};
+  if(po.paid-po.amount>tol) return {c:"red",t:"Excess paid"};
+  if(!po.pays.length) return {c:"gray",t:"Not paid"};
+  if(po.amount-po.paid<=tol) return {c:"green",t:"Fully paid"};
+  return {c:"amber",t:"Partly paid"};
+}
+const pillHtml=(c,t)=>`<span class="pill ${c}">${htmlEscape(t)}</span>`;
+
+function poDetail(po){
+  let h="";
+  if(po.pays.length){
+    h+=`<div class="main" style="margin-bottom:6px">Payments done against ${htmlEscape(po.no)}</div>
+    <table class="detail-table"><thead><tr><th>Date</th><th>Requisition</th><th>Payment type</th><th class="num">Amount paid</th><th>UTR / Txn</th><th>Bank / Mode</th></tr></thead><tbody>`;
+    po.pays.slice().sort((a,b)=>(a.date?a.date.getTime():0)-(b.date?b.date.getTime():0)).forEach(p=>{
+      h+=`<tr><td>${fmtDate(p.date)}</td><td>${p.pr?htmlEscape((p.pr.type||"Requisition")+" · "+fmtDate(p.pr.date)+" · "+money(p.pr.eligible)):"—"}</td><td>${htmlEscape(p.type||"—")}</td><td class="num money">${money(p.done)}</td><td>${htmlEscape([p.utr,p.txn].filter(Boolean).join(" / ")||"—")}</td><td>${htmlEscape([p.bank,p.paidThrough].filter(Boolean).join(" · ")||"—")}</td></tr>`;
+    });
+    h+=`</tbody></table>`;
+  }else{
+    h+=`<div class="sub">No payment has been recorded against this PO.</div>`;
+  }
+  if(po.reqs.length){
+    h+=`<div class="main" style="margin:12px 0 6px">Payment requisitions</div>
+    <table class="detail-table"><thead><tr><th>Request date</th><th>Type</th><th>Status</th><th class="num">Eligible payment</th><th class="num">Paid</th><th>Recorded?</th></tr></thead><tbody>`;
+    po.reqs.forEach(pr=>{
+      const rec=pr.pays.length?pillHtml(pr.paid-pr.eligible>T()?"red":(pr.eligible-pr.paid>T()?"amber":"green"),pr.paid-pr.eligible>T()?"Excess":(pr.eligible-pr.paid>T()?"Part paid":"Paid")):pillHtml("red","Not recorded");
+      h+=`<tr><td>${fmtDate(pr.date)}</td><td>${htmlEscape(pr.type||"—")}</td><td>${htmlEscape(pr.status||"—")}</td><td class="num money">${money(pr.eligible)}</td><td class="num money">${money(pr.paid)}</td><td>${rec}</td></tr>`;
+    });
+    h+=`</tbody></table>`;
+  }
+  return h;
+}
+
+const REPORTS={
+  awaiting:{
+    label:"POs Awaiting Initial Payment Request", tone:"warn",
+    rule:"Purchase Orders that have no payment requisition raised and no payment recorded yet.",
+    rows:()=>STATE.filtered.awaiting, rid:po=>po.id, detail:poDetail,
+    amt:rows=>rows.reduce((s,p)=>s+p.amount,0),
+    cols:[
+      {h:"PO No",f:p=>poCell(p),v:p=>p.no},
+      {h:"Vendor",f:vendorCell,v:p=>p.vendor},
+      {h:"Project",f:projectCell,v:p=>p.project},
+      {h:"PO Amount",num:1,sum:1,f:p=>`<span class="money">${money(p.amount)}</span>`,v:p=>p.amount},
+      {h:"PO Date",f:p=>fmtDate(p.date),v:p=>p.date?p.date.getTime():0,c:p=>fmtDate(p.date)},
+      {h:"Days waiting",num:1,f:p=>{const d=daysSince(p.date);return d===null?"—":pillHtml(d>CONFIG.slowAwaitingDays?"red":"gray",d+" d");},v:p=>daysSince(p.date)??-1},
+      {h:"Status",f:p=>pillHtml("gray","No requisition raised"),v:p=>"No requisition raised"}
+    ]
+  },
+  notRecorded:{
+    label:"Payment Not Recorded Yet", tone:"bad",
+    rule:"Payment requisitions that exist (and are not rejected) but have no Payment Details record, so the payment has not been recorded.",
+    rows:()=>STATE.filtered.notRecorded, rid:r=>r.po.id+"|"+r.pr.id, detail:r=>poDetail(r.po),
+    amt:rows=>rows.reduce((s,r)=>s+r.pr.eligible,0),
+    cols:[
+      {h:"PO No",f:r=>poCell(r.po),v:r=>r.po.no},
+      {h:"Vendor",f:r=>vendorCell(r.po),v:r=>r.po.vendor},
+      {h:"Project",f:r=>projectCell(r.po),v:r=>r.po.project},
+      {h:"Request Date",f:r=>fmtDate(r.pr.date),v:r=>r.pr.date?r.pr.date.getTime():0,c:r=>fmtDate(r.pr.date)},
+      {h:"Payment Type",f:r=>htmlEscape(r.pr.type||"—"),v:r=>r.pr.type},
+      {h:"Request Status",f:r=>htmlEscape(r.pr.status||"—"),v:r=>r.pr.status},
+      {h:"Eligible Payment",num:1,sum:1,f:r=>`<span class="money">${money(r.pr.eligible)}</span>`,v:r=>r.pr.eligible},
+      {h:"Days since request",num:1,f:r=>{const d=daysSince(r.pr.date);return d===null?"—":pillHtml(d>30?"red":"amber",d+" d");},v:r=>daysSince(r.pr.date)??-1}
+    ]
+  },
+  pending:{
+    label:"POs with Pending Subsequent Payments", tone:"warn",
+    rule:"POs where at least one payment is done, but the total paid is still below the PO amount. 'Next step' tells whether a requisition is already waiting for payment or a new one must be raised.",
+    rows:()=>STATE.filtered.pending, rid:po=>po.id, detail:poDetail,
+    amt:rows=>rows.reduce((s,p)=>s+Math.max(0,p.amount-p.paid),0),
+    cols:[
+      {h:"PO No",f:p=>poCell(p),v:p=>p.no},
+      {h:"Vendor",f:vendorCell,v:p=>p.vendor},
+      {h:"Project",f:projectCell,v:p=>p.project},
+      {h:"PO Amount",num:1,sum:1,f:p=>`<span class="money">${money(p.amount)}</span>`,v:p=>p.amount},
+      {h:"Requested",num:1,sum:1,f:p=>`<span class="money">${money(p.requested)}</span>`,v:p=>p.requested},
+      {h:"Paid",num:1,sum:1,f:p=>`<span class="money">${money(p.paid)}</span>`,v:p=>p.paid},
+      {h:"Balance",num:1,sum:1,f:p=>`<span class="money">${money(p.amount-p.paid)}</span>`,v:p=>round2(p.amount-p.paid)},
+      {h:"% Paid",f:p=>barCell(p.pctPaid),v:p=>round2(p.pctPaid),c:p=>round2(p.pctPaid)+"%"},
+      {h:"Next step",f:p=>p.requested-p.paid>T()?pillHtml("amber","Payment awaited on raised requisition"):pillHtml("blue","Raise next requisition"),v:p=>p.requested-p.paid>T()?"Payment awaited on raised requisition":"Raise next requisition"}
+    ]
+  },
+  excess:{
+    label:"Excess Payment", tone:"bad",
+    rule:"Payments above the limit: either total paid is more than the PO amount (level PO), or paid against one requisition is more than its Eligible Payment (level Requisition).",
+    rows:()=>STATE.filtered.excess, rid:r=>r.po.id+"|"+r.level+"|"+(r.pr?r.pr.id:""), detail:r=>poDetail(r.po),
+    amt:rows=>rows.filter(r=>r.level==="PO").reduce((s,r)=>s+r.excess,0)+rows.filter(r=>r.level!=="PO").reduce((s,r)=>s+r.excess,0),
+    cols:[
+      {h:"Level",f:r=>pillHtml(r.level==="PO"?"red":"amber",r.level),v:r=>r.level},
+      {h:"PO No",f:r=>poCell(r.po),v:r=>r.po.no},
+      {h:"Vendor",f:r=>vendorCell(r.po),v:r=>r.po.vendor},
+      {h:"Project",f:r=>projectCell(r.po),v:r=>r.po.project},
+      {h:"Limit (PO amount / Eligible)",num:1,f:r=>`<span class="money">${money(r.ref)}</span>`,v:r=>r.ref},
+      {h:"Paid",num:1,f:r=>`<span class="money">${money(r.paid)}</span>`,v:r=>r.paid},
+      {h:"Excess",num:1,sum:1,f:r=>`<span class="money" style="color:var(--red)">${money(r.excess)}</span>`,v:r=>r.excess},
+      {h:"Last Payment",f:r=>fmtDate(r.po.lastPayment),v:r=>r.po.lastPayment?r.po.lastPayment.getTime():0,c:r=>fmtDate(r.po.lastPayment)}
+    ]
+  },
+  done:{
+    label:"Payment Done Against PO", tone:"good",
+    rule:"Every PO that has at least one payment recorded: how many payments, how much was paid, and the share of the PO value. Click a row to see each payment.",
+    rows:()=>STATE.filtered.done, rid:po=>po.id, detail:poDetail,
+    amt:rows=>rows.reduce((s,p)=>s+p.paid,0),
+    cols:[
+      {h:"PO No",f:p=>poCell(p),v:p=>p.no},
+      {h:"Vendor",f:vendorCell,v:p=>p.vendor},
+      {h:"Project",f:projectCell,v:p=>p.project},
+      {h:"PO Amount",num:1,sum:1,f:p=>`<span class="money">${money(p.amount)}</span>`,v:p=>p.amount},
+      {h:"Payments",num:1,sum:1,f:p=>p.pays.length,v:p=>p.pays.length},
+      {h:"Paid",num:1,sum:1,f:p=>`<span class="money">${money(p.paid)}</span>`,v:p=>p.paid},
+      {h:"% of PO",f:p=>p.amount>0?barCell(p.pctPaid):"—",v:p=>round2(p.pctPaid),c:p=>round2(p.pctPaid)+"%"},
+      {h:"Last Payment",f:p=>fmtDate(p.lastPayment),v:p=>p.lastPayment?p.lastPayment.getTime():0,c:p=>fmtDate(p.lastPayment)},
+      {h:"Status",f:p=>{const s=poStatus(p);return pillHtml(s.c,s.t);},v:p=>poStatus(p).t}
+    ]
+  },
+  grn:{
+    label:"Payment Done but GRN Pending", tone:"warn",
+    rule:"POs where payment has been made but goods receipt (GRN) is not complete.",
+    rows:()=>STATE.filtered.grn, rid:po=>po.id, detail:poDetail,
+    amt:rows=>rows.reduce((s,p)=>s+p.paid,0),
+    cols:[
+      {h:"PO No",f:p=>poCell(p),v:p=>p.no},
+      {h:"Vendor",f:vendorCell,v:p=>p.vendor},
+      {h:"Project",f:projectCell,v:p=>p.project},
+      {h:"PO Amount",num:1,sum:1,f:p=>`<span class="money">${money(p.amount)}</span>`,v:p=>p.amount},
+      {h:"Paid",num:1,sum:1,f:p=>`<span class="money">${money(p.paid)}</span>`,v:p=>p.paid},
+      {h:"Last Payment",f:p=>fmtDate(p.lastPayment),v:p=>p.lastPayment?p.lastPayment.getTime():0,c:p=>fmtDate(p.lastPayment)},
+      {h:"Days since payment",num:1,f:p=>{const d=daysSince(p.lastPayment);return d===null?"—":pillHtml(d>30?"red":"amber",d+" d");},v:p=>daysSince(p.lastPayment)??-1},
+      {h:"GRN Status",f:p=>pillHtml("amber",p.grn.text||"Pending"),v:p=>p.grn.text||"Pending"}
+    ]
+  },
+  vendor:groupDef("Vendor-wise Summary","vendor","Vendor","Totals for every vendor: PO value, requisitions raised, amount paid, balance, excess, and open follow-ups. Click a row to list its POs."),
+  project:groupDef("Project-wise Summary","project","Project","Totals for every project code: PO value, requisitions raised, amount paid, balance, excess, and open follow-ups. Click a row to list its POs.")
+};
+
+function groupDef(label,key,colName,rule){
+  return {
+    label, tone:"", rule,
+    rows:()=>STATE.filtered[key], rid:g=>g.name,
+    detail:g=>{
+      let h=`<div class="main" style="margin-bottom:6px">POs of ${htmlEscape(g.name)}</div>
+      <table class="detail-table"><thead><tr><th>PO No</th><th>${key==="vendor"?"Project":"Vendor"}</th><th class="num">PO Amount</th><th class="num">Requested</th><th class="num">Paid</th><th class="num">Balance</th><th>Status</th></tr></thead><tbody>`;
+      g.pos.slice().sort((a,b)=>b.paid-a.paid).forEach(p=>{
+        const s=poStatus(p);
+        h+=`<tr><td>${htmlEscape(p.no)}</td><td>${htmlEscape(key==="vendor"?p.project:p.vendor)}</td><td class="num money">${money(p.amount)}</td><td class="num money">${money(p.requested)}</td><td class="num money">${money(p.paid)}</td><td class="num money">${money(Math.max(0,p.amount-p.paid))}</td><td>${pillHtml(s.c,s.t)}</td></tr>`;
+      });
+      return h+`</tbody></table>`;
+    },
+    amt:rows=>rows.reduce((s,g)=>s+g.paid,0),
+    cols:[
+      {h:colName,f:g=>`<div class="main">${htmlEscape(g.name)}</div>`,v:g=>g.name},
+      {h:"POs",num:1,sum:1,f:g=>g.pos.length,v:g=>g.pos.length},
+      {h:"PO Value",num:1,sum:1,f:g=>`<span class="money">${money(g.value)}</span>`,v:g=>round2(g.value)},
+      {h:"Requested",num:1,sum:1,f:g=>`<span class="money">${money(g.requested)}</span>`,v:g=>round2(g.requested)},
+      {h:"Paid",num:1,sum:1,f:g=>`<span class="money">${money(g.paid)}</span>`,v:g=>round2(g.paid)},
+      {h:"Balance",num:1,sum:1,f:g=>`<span class="money">${money(g.balance)}</span>`,v:g=>round2(g.balance)},
+      {h:"Excess",num:1,sum:1,f:g=>g.excess>0?`<span class="money" style="color:var(--red)">${money(g.excess)}</span>`:"—",v:g=>round2(g.excess)},
+      {h:"% Paid",f:g=>g.value>0?barCell((g.paid/g.value)*100):"—",v:g=>g.value>0?round2((g.paid/g.value)*100):0,c:g=>g.value>0?round2((g.paid/g.value)*100)+"%":""},
+      {h:"Awaiting request",num:1,sum:1,f:g=>g.awaiting,v:g=>g.awaiting},
+      {h:"Pending payments",num:1,sum:1,f:g=>g.pending,v:g=>g.pending},
+      {h:"Not recorded",num:1,sum:1,f:g=>g.notRecorded,v:g=>g.notRecorded}
+    ]
+  };
+}
+
+const TILE_KEYS=["awaiting","notRecorded","pending","excess","done","grn"];
+const TAB_KEYS=["vendor","project"];
+
+/* ============================ RENDERING =================================== */
+function onFilterChange(){ render(); }
+function clearFilters(){
+  document.getElementById("fSearch").value="";
+  document.getElementById("fProject").value="";
+  document.getElementById("fVendor").value="";
+  render();
+}
+function setActive(key){ STATE.active=key; renderTiles(); renderTabs(); renderReport(); }
+
+function render(){
+  if(!STATE.model) return;
+  const f=currentFilters();
+  STATE.filtered=computeReports(STATE.model.pos.filter(p=>poMatchesFilters(p,f)));
+  renderTiles(); renderTabs(); renderReport();
+}
+function renderTiles(){
+  document.getElementById("tiles").innerHTML=TILE_KEYS.map(k=>{
+    const def=REPORTS[k], rows=def.rows();
+    return `<button class="tile ${def.tone||""} ${STATE.active===k?"active":""}" onclick="setActive('${k}')">
+      <div class="l">${htmlEscape(def.label)}</div><div class="n">${rows.length.toLocaleString("en-IN")}</div><div class="a">${money(def.amt(rows))}</div></button>`;
+  }).join("");
+}
+function renderTabs(){
+  document.getElementById("tabs2").innerHTML=TAB_KEYS.map(k=>
+    `<button class="tab2 ${STATE.active===k?"active":""}" onclick="setActive('${k}')">${htmlEscape(REPORTS[k].label)} (${REPORTS[k].rows().length})</button>`).join("");
+}
+function sortedRows(key){
+  const def=REPORTS[key], rows=def.rows().slice(), s=STATE.sort[key];
+  if(s && def.cols[s.col]){
+    const v=def.cols[s.col].v;
+    rows.sort((a,b)=>{
+      const x=v(a), y=v(b);
+      const r=(typeof x==="number"&&typeof y==="number")?x-y:String(x??"").localeCompare(String(y??""));
+      return s.dir==="asc"?r:-r;
+    });
+  }
+  return rows;
+}
+function sortBy(col){
+  const key=STATE.active, s=STATE.sort[key];
+  STATE.sort[key]=(s&&s.col===col)?{col,dir:s.dir==="asc"?"desc":"asc"}:{col,dir:"asc"};
+  renderReport();
+}
+function toggleRow(i){
+  const key=STATE.active, rows=STATE.view.rows, def=REPORTS[key];
+  const id=def.rid(rows[i]);
+  STATE.expanded[key]=STATE.expanded[key]||{};
+  if(STATE.expanded[key][id]) delete STATE.expanded[key][id]; else STATE.expanded[key][id]=true;
+  renderReport();
+}
+function renderReport(){
+  const key=STATE.active, def=REPORTS[key], rows=sortedRows(key);
+  STATE.view={key,rows};
+  document.getElementById("reportTitle").textContent=def.label;
+  document.getElementById("reportRule").textContent=def.rule;
+  document.getElementById("reportCount").textContent=rows.length.toLocaleString("en-IN")+" row(s)";
+
+  let notice="";
+  if(key==="grn" && !STATE.model.pos.some(p=>p.grn.known)){
+    notice=`<div class="notice"><b>GRN source not found.</b> No GRN status field was detected on the Purchase Order report and no GRN report is configured. Open Diagnostics to see the PO field names, then set <code>CONFIG.poFields.grn</code> or <code>CONFIG.grn.report</code>.</div>`;
+  }
+  if(STATE.warnings.length) notice+=`<div class="notice">${STATE.warnings.map(htmlEscape).join("<br>")}</div>`;
+  if(STATE.model.orphanPR||STATE.model.orphanPD){
+    notice+=`<div class="notice">${STATE.model.orphanPR} requisition(s) and ${STATE.model.orphanPD} payment(s) could not be linked to any Purchase Order and are not counted.</div>`;
+  }
+  if(!STATE.keys.po) notice+=`<div class="notice"><b>PO number field not detected</b> on ${htmlEscape(CONFIG.poReport)}. Check Diagnostics and update CONFIG.poFields.po.</div>`;
+  document.getElementById("reportNotice").innerHTML=notice;
+
+  const body=document.getElementById("reportBody");
+  if(!rows.length){
+    body.innerHTML=`<div class="empty"><strong>Nothing to show.</strong>No rows match this report with the current filters.</div>`;
+    return;
+  }
+  const s=STATE.sort[key], exp=STATE.expanded[key]||{};
+  let h=`<table><thead><tr>`+def.cols.map((c,i)=>
+    `<th class="sortable ${c.num?"num":""}" onclick="sortBy(${i})">${htmlEscape(c.h)}${s&&s.col===i?(s.dir==="asc"?" ▲":" ▼"):""}</th>`).join("")+`</tr></thead><tbody>`;
+  rows.forEach((r,i)=>{
+    const id=def.rid(r), open=!!exp[id];
+    h+=`<tr class="data-row ${def.detail?"clickable":""}" onclick="toggleRow(${i})">`+
+       def.cols.map(c=>`<td class="${c.num?"num":""}">${c.f(r)}</td>`).join("")+`</tr>`;
+    if(open && def.detail) h+=`<tr class="detail"><td colspan="${def.cols.length}">${def.detail(r)}</td></tr>`;
+  });
+  if(def.cols.some(c=>c.sum)){
+    h+=`<tr class="totals">`+def.cols.map((c,i)=>{
+      if(i===0) return `<td>Total</td>`;
+      if(!c.sum) return `<td></td>`;
+      const t=rows.reduce((a,r)=>a+Number(c.v(r)||0),0);
+      const isMoney=!/^(POs|Payments|Awaiting request|Pending payments|Not recorded)$/.test(c.h);
+      return `<td class="num">${isMoney?money(t):t.toLocaleString("en-IN")}</td>`;
+    }).join("")+`</tr>`;
+  }
+  body.innerHTML=h+`</tbody></table>`;
+}
+/* ============================== EXPORT ==================================== */
+function csvCell(v){ return '"'+String(v??"").replace(/"/g,'""')+'"'; }
+function exportCurrent(){
+  if(!STATE.model){ toast("Data is not loaded yet.","error"); return; }
+  const key=STATE.active, def=REPORTS[key], rows=sortedRows(key);
+  if(!rows.length){ toast("This report has no rows to export."); return; }
+  const lines=[def.cols.map(c=>csvCell(c.h)).join(",")];
+  rows.forEach(r=>lines.push(def.cols.map(c=>csvCell(c.c?c.c(r):c.v(r))).join(",")));
+  const blob=new Blob(["﻿"+lines.join("\n")],{type:"text/csv;charset=utf-8"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a");
-  a.href=url;a.download="payment-reconciliation-results.csv";
-  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  a.href=url;
+  a.download=def.label.replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"").toLowerCase()+".csv";
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
 
-/* ============================== DIAGNOSTICS ================================ */
+/* ============================ DIAGNOSTICS ================================= */
 function openDiagnostics(){
   document.getElementById("diagModal").classList.remove("hidden");
   runDiagnostics();
 }
-function closeDiagnostics(){document.getElementById("diagModal").classList.add("hidden")}
+function closeDiagnostics(){ document.getElementById("diagModal").classList.add("hidden"); }
 
-function sampleFieldTable(rec,expected){
-  if(!rec) return "<div class='reason'>No record returned.</div>";
-  const keys=Object.keys(rec);
-  const rows=keys.map(k=>{
-    const used=expected.includes(k);
-    return `<tr><td>${htmlEscape(k)}</td><td>${htmlEscape(valueText(rec[k]).slice(0,90))}</td><td>${used?"✓ used":""}</td></tr>`;
+function sampleTable(rows,usedKeys){
+  const rec=rows[0];
+  if(!rec) return `<div class="reason">No records returned.</div>`;
+  const used=new Set(usedKeys.filter(Boolean));
+  const body=Object.keys(rec).map(k=>{
+    const isObj=rec[k]!==null && typeof rec[k]==="object";
+    return `<tr><td>${htmlEscape(k)}${isObj?' <span class="pill amber">Lookup</span>':""}</td><td>${htmlEscape(valueText(rec[k]).slice(0,90))}</td><td>${used.has(k)?"✓ used":""}</td></tr>`;
   }).join("");
-  const missing=expected.filter(x=>!keys.includes(x));
-  return `
-    ${missing.length?`<div class="reason"><b>Expected field(s) not present in this sample:</b> ${htmlEscape(missing.join(", "))}</div>`:""}
-    <div class="table-wrap" style="max-height:300px"><table style="min-width:600px">
-      <thead><tr><th>Creator field link name</th><th>Sample value</th><th>Config</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table></div>`;
+  return `<div class="table-wrap" style="max-height:260px"><table style="min-width:560px"><thead><tr><th>Field link name</th><th>Sample value</th><th>Config</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
-
 function runDiagnostics(){
-  const out=document.getElementById("diagBody");
-  const prExpected=Object.values(CONFIG.paymentRequisitionFields);
-  const pdExpected=Object.values(CONFIG.paymentDetailsFields);
+  const out=document.getElementById("diagBody"), K=STATE.keys||{}, M=STATE.model;
+  const det=Object.keys(CONFIG.poFields).map(n=>`<tr><td>${htmlEscape(n)}</td><td>${K[n]?htmlEscape(K[n]):'<span class="pill red">not found</span>'}</td><td>${htmlEscape(CONFIG.poFields[n].join(", "))}</td></tr>`).join("");
+  const R=CONFIG.requisitionFields, P=CONFIG.paymentFields;
   out.innerHTML=`
-    <div class="section-title">SDK / connection</div>
     <div class="reason">
-      SDK present: <b>${!!(window.ZOHO&&ZOHO.CREATOR&&ZOHO.CREATOR.DATA)}</b><br>
-      Creator ready: <b>${STATE.creatorReady}</b><br>
-      App: <b>${htmlEscape(CONFIG.appName)}</b><br>
-      Payment Requisition report: <b>${htmlEscape(CONFIG.paymentRequisitionReport)}</b> (${STATE.paymentRequisitions.length} loaded)<br>
-      Payment Details report: <b>${htmlEscape(CONFIG.paymentDetailsReport)}</b> (${STATE.paymentDetails.length} loaded)
+      SDK present: <b>${!!(window.ZOHO&&ZOHO.CREATOR&&ZOHO.CREATOR.DATA)}</b> · App: <b>${htmlEscape(CONFIG.appName)}</b><br>
+      Purchase Orders: <b>${STATE.poRaw.length.toLocaleString("en-IN")}</b> (${htmlEscape(CONFIG.poReport)})<br>
+      Payment Requisitions: <b>${STATE.prRaw.length.toLocaleString("en-IN")}</b> (${htmlEscape(CONFIG.requisitionReport)})<br>
+      Payment Details: <b>${STATE.pdRaw.length.toLocaleString("en-IN")}</b> (${htmlEscape(CONFIG.paymentReport)})<br>
+      ${CONFIG.grn.report?`GRN records: <b>${STATE.grnRaw.length.toLocaleString("en-IN")}</b> (${htmlEscape(CONFIG.grn.report)})<br>`:""}
+      ${M?`Unlinked requisitions: <b>${M.orphanPR}</b> · Unlinked payments: <b>${M.orphanPD}</b>`:""}
+      ${STATE.warnings.length?`<br><b>Warnings:</b><br>${STATE.warnings.map(htmlEscape).join("<br>")}`:""}
+      ${STATE.error?`<br><b>Last error:</b> ${htmlEscape(STATE.error.message||String(STATE.error))}`:""}
     </div>
-    <div class="section-title" style="margin-top:16px">Payment Requisition sample field names</div>
-    ${sampleFieldTable(STATE.paymentRequisitions[0],prExpected)}
-    <div class="section-title" style="margin-top:16px">Payment_detals2 sample field names</div>
-    ${sampleFieldTable(STATE.paymentDetails[0],pdExpected)}
-    ${STATE.creatorError?`<div class="section-title" style="margin-top:16px">Last error</div><pre>${htmlEscape(STATE.creatorError.stack||STATE.creatorError.message||String(STATE.creatorError))}</pre>`:""}
-  `;
+    <div class="card-title" style="margin:6px 0">Purchase Order fields detected</div>
+    <div class="table-wrap" style="max-height:220px"><table style="min-width:520px"><thead><tr><th>Meaning</th><th>Detected link name</th><th>Tried</th></tr></thead><tbody>${det}</tbody></table></div>
+    <div class="card-title" style="margin:14px 0 6px">Purchase Order report: all field names</div>
+    ${sampleTable(STATE.poRaw,Object.values(K))}
+    <div class="card-title" style="margin:14px 0 6px">Payment Requisition report: all field names</div>
+    ${sampleTable(STATE.prRaw,Object.values(R))}
+    <div class="card-title" style="margin:14px 0 6px">Payment Details report: all field names</div>
+    ${sampleTable(STATE.pdRaw,Object.values(P))}`;
 }
 
-/* ========================== TALLY LIVE MODE ================================ */
-function switchReconciliationMode(mode){
-  STATE.reconciliationMode = mode === "tally" ? "tally" : "file";
-  const tally = STATE.reconciliationMode === "tally";
-  document.getElementById("fileReconciliationMode").classList.toggle("hidden",tally);
-  document.getElementById("tallyReconciliationMode").classList.toggle("hidden",!tally);
-  document.getElementById("modeFileBtn").classList.toggle("active",!tally);
-  document.getElementById("modeTallyBtn").classList.toggle("active",tally);
-  if(tally && !STATE.tallyLoaded) loadTallyPayments(false);
-}
-
-function tallyLookupId(v){
-  if(v === null || v === undefined) return "";
-  if(typeof v === "object") return String(v.ID || v.id || "");
-  const s=String(v).trim();
-  return /^\d+$/.test(s) ? s : "";
-}
-
-function tallyInputView(d){
-  return {
-    po:valueText(d.PO_Number,["PO_Number","PO_No"]),
-    project:valueText(d.Project_Code_Import,["Project_Code"]),
-    vendor:valueText(d.Vendor_Name_Import,["Vendor_Display_Name","Vendor_Name"]),
-    amount:cleanAmount(d.Imported_Amount)
-  };
-}
-
-function tallyCandidateFromScore(scored,source){
-  return {
-    id:String(scored?.rec?.id||""),
-    po:scored?.rec?.po||"",
-    project:scored?.rec?.project||"",
-    vendor:scored?.rec?.vendor||"",
-    amount:Number(scored?.rec?.eligible||0),
-    score:Number(scored?.score||0),
-    source:source||"Suggested",
-    diff:Number(scored?.diff||0),
-    diffPct:Number(scored?.diffPct||0),
-    exact:!!scored?.exact,
-    poExact:!!scored?.poExact,
-    projectExact:!!scored?.projectExact,
-    vendorExact:!!scored?.vendorExact
-  };
-}
-
-function tallyCurrentMatchCandidate(d){
-  const matchedId=tallyLookupId(d.Matched_Payment_Requisition);
-  if(!matchedId) return null;
-
-  const live=STATE.paymentRequisitions.find(x=>String(x.ID)===matchedId);
-  if(live){
-    return tallyCandidateFromScore(scoreCandidate(tallyInputView(d),live),"Current Match");
-  }
-
-  return {
-    id:matchedId,
-    po:valueText(d.System_PO_Number,["PO_Number","PO_No"]),
-    project:valueText(d.System_Project_Code,["Project_Code"]),
-    vendor:valueText(d.System_Vendor_Name,["Vendor_Display_Name","Vendor_Name"]),
-    amount:cleanAmount(d.System_Amount),
-    score:Number(cleanAmount(d.Match_Score)||0),
-    source:"Current Match",
-    diff:Math.abs(cleanAmount(d.Imported_Amount)-cleanAmount(d.System_Amount)),
-    diffPct:amountDiffPct(cleanAmount(d.Imported_Amount),cleanAmount(d.System_Amount)),
-    exact:false,
-    poExact:false,
-    projectExact:false,
-    vendorExact:false
-  };
-}
-
-// IMPORTANT: this list no longer reads Payment_Reconciliation_Import.Match_Suggestions.
-// The only candidate initially retained is the current matched Payment Requisition.
-// Best suggestions are calculated live from All_Payment_Requisitions_INR when Suggest is clicked.
-function tallyCandidateList(d){
-  const current=tallyCurrentMatchCandidate(d);
-  return current ? [current] : [];
-}
-
-function tallyBuildRow(d){
-  const candidates=tallyCandidateList(d);
-  const matchedId=tallyLookupId(d.Matched_Payment_Requisition);
-  return {
-    id:String(d.ID||""),
-    raw:d,
-    candidates,
-    selectedPRID:matchedId,
-    busy:false
-  };
-}
-
-function tallyOpenCriteria(){
-  return 'Match_Status != "Accepted" && Match_Status != "Rejected"';
-}
-
-async function loadTallyPayments(showToast){
-  if(STATE.tallyBusy) return;
-  STATE.tallyBusy=true;
-  const btn=document.getElementById("tallyRefreshBtn");
-  if(btn) btn.disabled=true;
+/* ============================== STARTUP =================================== */
+async function refreshData(){
+  setConnection(false,"Loading from Creator...");
   try{
-    const records=await getAllRecords(CONFIG.tallyImportReport,"Loading Tally reconciliation records");
-    const open=records.filter(d=>{
-      const st=valueText(d.Match_Status).trim();
-      return st!=="Accepted" && st!=="Rejected";
-    });
-    STATE.tallyRows=open.map(tallyBuildRow);
-    STATE.tallyLoaded=true;
-    updateTallyStats();
-    renderTallyTable();
-    if(showToast) toast(`${STATE.tallyRows.length} open Tally payment(s) loaded.`,"success");
+    await loadAll();
+    buildModel();
+    STATE.ready=true; STATE.error=null;
+    refreshFilterOptions();
+    render();
+    setConnection(true,`Creator Live · ${STATE.poRaw.length.toLocaleString("en-IN")} POs · ${STATE.prRaw.length.toLocaleString("en-IN")} requisitions · ${STATE.pdRaw.length.toLocaleString("en-IN")} payments`);
+    toast("Data refreshed.","success");
   }catch(err){
-    toast(`Could not load Tally payments: ${err.message||String(err)}`,"error");
-    console.error("Tally load error",err);
-  }finally{
-    STATE.tallyBusy=false;
-    if(btn) btn.disabled=false;
-  }
-}
-
-function updateTallyStats(){
-  const all=STATE.tallyRows;
-  const status=r=>valueText(r.raw.Match_Status).trim();
-  document.getElementById("tallyStatOpen").textContent=all.length;
-  document.getElementById("tallyStatMatched").textContent=all.filter(r=>status(r)==="Matched").length;
-  document.getElementById("tallyStatPartial").textContent=all.filter(r=>["Partial Payment","Split Matched","Suggested Split Match"].includes(status(r))).length;
-  document.getElementById("tallyStatReview").textContent=all.filter(r=>["Suggested Match","Multiple Matches","Mismatch","Not Found","Pending"].includes(status(r))).length;
-}
-
-function tallyVisibleRows(){
-  const company=(document.getElementById("tallyCompanyFilter")?.value||"").trim();
-  const status=(document.getElementById("tallyStatusFilter")?.value||"").trim();
-  const q=(document.getElementById("tallySearch")?.value||"").trim().toUpperCase();
-  return STATE.tallyRows.filter(r=>{
-    const d=r.raw;
-    if(company && valueText(d.Tally_Company)!==company) return false;
-    if(status && valueText(d.Match_Status)!==status) return false;
-    if(!q) return true;
-    const c=tallySelectedCandidate(r);
-    const hay=[
-      d.Tally_Company,d.Tally_Voucher_Number,d.PO_Number,d.Project_Code_Import,
-      d.Vendor_Name_Import,d.UTR_No_Import,d.Transaction_ID_Import,
-      d.System_PO_Number,d.System_Project_Code,d.System_Vendor_Name,d.Match_Status,
-      c?.po,c?.project,c?.vendor
-    ].map(valueText).join(" ").toUpperCase();
-    return hay.includes(q);
-  });
-}
-
-function tallyStatusClass(status){
-  status=String(status||"");
-  if(["Matched","Split Matched"].includes(status)) return "matched";
-  if(["Suggested Match","Partial Payment","Suggested Split Match","Multiple Matches"].includes(status)) return "suggested";
-  if(status==="Not Found" || status==="Pending") return "not-found";
-  return "mismatch";
-}
-
-function tallySelectedCandidate(r){
-  return r.candidates.find(c=>String(c.id)===String(r.selectedPRID)) || null;
-}
-
-function tallyBestCandidates(r,searchText){
-  if(!r) return [];
-  const inv=tallyInputView(r.raw);
-  const q=String(searchText||"").trim().toUpperCase();
-
-  return STATE.paymentRequisitions
-    .map(rec=>scoreCandidate(inv,rec))
-    .filter(x=>Number(x.rec.eligible||0)>0)
-    .filter(x=>{
-      if(!q) return true;
-      return [x.rec.po,x.rec.project,x.rec.vendor,String(x.rec.eligible)]
-        .join(" ").toUpperCase().includes(q);
-    })
-    .sort((a,b)=>b.score-a.score || a.diff-b.diff)
-    .slice(0,CONFIG.tallySuggestionCount)
-    .map((x,i)=>tallyCandidateFromScore(x,i===0?"Best Match":"Suggested"));
-}
-
-function openTallySuggestions(recordId){
-  const r=STATE.tallyRows.find(x=>x.id===String(recordId));
-  if(!r){toast("Tally reconciliation row was not found.","error");return}
-  if(!STATE.paymentRequisitions.length){
-    toast("Payment Requisition data is not loaded. Click Refresh Creator Data first.","error");
-    return;
-  }
-
-  STATE.tallySuggestRowId=String(recordId);
-  const search=document.getElementById("tallySuggestSearch");
-  if(search) search.value="";
-
-  const d=r.raw;
-  document.getElementById("tallySuggestContext").innerHTML=`
-    <div class="suggest-context">
-      <div class="box"><div class="k">Tally PO</div><div class="v">${htmlEscape(valueText(d.PO_Number)||"—")}</div></div>
-      <div class="box"><div class="k">Project</div><div class="v">${htmlEscape(valueText(d.Project_Code_Import)||"—")}</div></div>
-      <div class="box"><div class="k">Tally Vendor</div><div class="v">${htmlEscape(valueText(d.Vendor_Name_Import)||"—")}</div></div>
-      <div class="box"><div class="k">Tally Amount</div><div class="v">${money(cleanAmount(d.Imported_Amount))}</div></div>
-    </div>`;
-
-  renderTallySuggestions();
-  document.getElementById("tallySuggestModal").classList.remove("hidden");
-}
-
-function closeTallySuggestions(){
-  document.getElementById("tallySuggestModal").classList.add("hidden");
-  STATE.tallySuggestRowId=null;
-}
-
-function renderTallySuggestions(){
-  const out=document.getElementById("tallySuggestList");
-  if(!out) return;
-  const r=STATE.tallyRows.find(x=>x.id===String(STATE.tallySuggestRowId));
-  if(!r){out.innerHTML='<div class="empty">No reconciliation row selected.</div>';return}
-
-  const q=document.getElementById("tallySuggestSearch")?.value||"";
-  let candidates=tallyBestCandidates(r,q);
-
-  // Keep the current/selected PR visible even if it is outside the top ranking.
-  const current=tallySelectedCandidate(r);
-  if(current && !candidates.some(x=>String(x.id)===String(current.id))){
-    candidates=[current,...candidates].slice(0,CONFIG.tallySuggestionCount);
-  }
-
-  out.innerHTML=candidates.map((c,i)=>`
-    <div class="suggest-item ${String(c.id)===String(r.selectedPRID)?"selected":""}">
-      <div class="suggest-rank">${i+1}</div>
-      <div>
-        <div class="suggest-po">${htmlEscape(c.po||"PR "+c.id)}</div>
-        <div class="suggest-meta">${htmlEscape(c.project||"—")} · ${htmlEscape(c.vendor||"—")}</div>
-        <div class="suggest-meta">Difference ${money(c.diff)} · ${pct(c.diffPct)} · ${htmlEscape(c.source||"Suggested")}</div>
-      </div>
-      <div class="suggest-money">${money(c.amount)}</div>
-      <div>
-        <div class="suggest-score">${Math.round(c.score)}%</div>
-        <button class="btn small ${String(c.id)===String(r.selectedPRID)?"primary":""}" style="width:100%;margin-top:5px" onclick="selectTallySuggestion('${htmlEscape(c.id)}')">${String(c.id)===String(r.selectedPRID)?"Selected":"Select"}</button>
-      </div>
-    </div>
-  `).join("") || '<div class="empty"><strong>No Payment Requisition found.</strong>Try another search.</div>';
-}
-
-function selectTallySuggestion(prId){
-  const r=STATE.tallyRows.find(x=>x.id===String(STATE.tallySuggestRowId));
-  if(!r) return;
-
-  const scored=tallyBestCandidates(r,"").find(x=>String(x.id)===String(prId)) || (()=>{
-    const rec=STATE.paymentRequisitions.find(x=>String(x.ID)===String(prId));
-    return rec ? tallyCandidateFromScore(scoreCandidate(tallyInputView(r.raw),rec),"User Selected") : null;
-  })();
-
-  if(!scored){toast("Selected Payment Requisition could not be loaded.","error");return}
-  scored.source="User Selected";
-
-  const existing=r.candidates.findIndex(x=>String(x.id)===String(scored.id));
-  if(existing>=0) r.candidates[existing]=scored;
-  else r.candidates.push(scored);
-
-  r.selectedPRID=String(scored.id);
-  renderTallyTable();
-  closeTallySuggestions();
-  toast(`Selected ${scored.po||scored.id}. Click Accept to finalize.`,"success");
-}
-
-function renderTallyTable(){
-  const body=document.getElementById("tallyResultBody");
-  if(!body) return;
-  const rows=tallyVisibleRows();
-  document.getElementById("tallyEmpty").classList.toggle("hidden",rows.length>0);
-  body.innerHTML="";
-
-  for(const r of rows){
-    const d=r.raw;
-    const status=valueText(d.Match_Status).trim() || "Pending";
-    const c=tallySelectedCandidate(r);
-    const imported=cleanAmount(d.Imported_Amount);
-    const selectedSystem=c?Number(c.amount||0):cleanAmount(d.System_Amount);
-    const selectedDiff=c?Math.abs(imported-selectedSystem):cleanAmount(d.Amount_Difference || Math.abs(imported-selectedSystem));
-    const selectedScore=c?Number(c.score||0):Number(cleanAmount(d.Match_Score)||0);
-    const primaryRef=valueText(d.UTR_No_Import)||valueText(d.Transaction_ID_Import)||valueText(d.Cheque_No_Import)||"—";
-
-    const selectedBlock=c ? `
-      <div class="tally-fields">
-        <div class="tally-field"><div class="k">Creator PO</div><div class="v">${htmlEscape(c.po||"—")}</div></div>
-        <div class="tally-field"><div class="k">Project</div><div class="v">${htmlEscape(c.project||"—")}</div></div>
-        <div class="tally-field" style="grid-column:1/-1"><div class="k">Vendor</div><div class="v">${htmlEscape(c.vendor||"—")}</div></div>
-        <div class="tally-field"><div class="k">Eligible Payment</div><div class="v big">${money(c.amount)}</div></div>
-        <div class="tally-field"><div class="k">Difference</div><div class="v big">${money(selectedDiff)}</div></div>
-      </div>` : `
-      <div class="preview-warning" style="margin:0">No Payment Requisition is selected. Use <b>Suggest / Change PO</b> before accepting this payment.</div>`;
-
-    const card=document.createElement("div");
-    card.className="tally-payment-card"+(r.busy?" tally-row-busy":"");
-    card.innerHTML=`
-      <div class="tally-payment-head">
-        <div>
-          <div class="tally-payment-title">${htmlEscape(valueText(d.PO_Number)||"No PO from Tally")}</div>
-          <div class="tally-payment-sub">${htmlEscape(valueText(d.Tally_Company)||"—")} · Voucher ${htmlEscape(valueText(d.Tally_Voucher_Number)||"—")} · ${htmlEscape(valueText(d.Payment_Record_Date_Import)||"—")}</div>
-        </div>
-        <div class="tally-payment-badges">
-          <span class="status ${tallyStatusClass(status)}">${htmlEscape(status)}</span>
-          <span class="tally-score-badge">Score ${Math.round(selectedScore)}%</span>
-        </div>
-      </div>
-      <div class="tally-payment-body">
-        <div class="tally-panel">
-          <div class="tally-panel-title">Tally / Reconciliation Payment</div>
-          <div class="tally-fields">
-            <div class="tally-field"><div class="k">Project</div><div class="v">${htmlEscape(valueText(d.Project_Code_Import)||"—")}</div></div>
-            <div class="tally-field"><div class="k">Amount Paid</div><div class="v big">${money(imported)}</div></div>
-            <div class="tally-field" style="grid-column:1/-1"><div class="k">Vendor</div><div class="v">${htmlEscape(valueText(d.Vendor_Name_Import)||"—")}</div></div>
-            <div class="tally-field"><div class="k">UTR / Transaction</div><div class="v">${htmlEscape(primaryRef)}</div></div>
-            <div class="tally-field"><div class="k">Payment Type</div><div class="v">${htmlEscape(valueText(d.Payment_Type_Import)||"—")}</div></div>
-          </div>
-        </div>
-        <div class="tally-panel selected-panel">
-          <div class="tally-panel-title">Selected Payment Requisition</div>
-          ${selectedBlock}
-        </div>
-      </div>
-      <div class="tally-payment-foot">
-        <div class="tally-payment-foot-note">On Accept, the selected match is saved to <b>Match_Invoce_Report</b>, the backend creates <b>Payment_detals2</b>, and this widget then fills the additional available Payment Details fields from the selected requisition and reconciliation record.</div>
-        <div class="tally-payment-foot-actions">
-          <button class="btn" ${r.busy?"disabled":""} onclick="openTallySuggestions('${htmlEscape(r.id)}')">Suggest / Change PO</button>
-          <button class="btn primary" ${!r.selectedPRID||r.busy?"disabled":""} onclick="openTallyReview('${htmlEscape(r.id)}')">Review & Accept</button>
-        </div>
-      </div>`;
-    body.appendChild(card);
-  }
-}
-
-
-function tallyFirstValue(record,aliases){
-  for(const key of (aliases||[])){
-    if(record && record[key] !== undefined && record[key] !== null && String(valueText(record[key])).trim() !== "") return record[key];
-  }
-  return null;
-}
-
-function tallyFirstText(record,aliases){
-  return valueText(tallyFirstValue(record,aliases));
-}
-
-function tallySelectedPRRaw(r){
-  if(!r || !r.selectedPRID) return null;
-  return STATE.paymentRequisitions.find(x=>String(x.ID)===String(r.selectedPRID)) || null;
-}
-
-function tallyAlreadyPaidForPR(prId){
-  return round2(STATE.paymentDetails.reduce((sum,rec)=>{
-    const d=pdView(rec);
-    return String(d.paymentRequisitionId)===String(prId) ? sum + Number(d.paymentDone||0) : sum;
-  },0));
-}
-
-function previewValue(label,value,source,asMoney){
-  const shown=(value===null || value===undefined || String(valueText(value)).trim()==="") ? "—" : (asMoney?money(cleanAmount(value)):valueText(value));
-  return `<div class="preview-field"><div class="k">${htmlEscape(label)}</div><div class="v ${asMoney?"money-value":""}">${htmlEscape(shown)}</div>${source?`<div class="source">${htmlEscape(source)}</div>`:""}</div>`;
-}
-
-function tallyBuildPreview(r){
-  const d=r.raw;
-  const c=tallySelectedCandidate(r);
-  const pr=tallySelectedPRRaw(r) || {};
-  const imported=cleanAmount(d.Imported_Amount);
-  const eligible=Number(c?.amount || cleanAmount(d.System_Amount) || 0);
-  const alreadyPaid=tallyAlreadyPaidForPR(r.selectedPRID);
-  let remainingBefore=round2(eligible-alreadyPaid);
-  let remainingAfter=round2(remainingBefore-imported);
-  if(Math.abs(remainingAfter)<=CONFIG.exactAmountTolerance) remainingAfter=0;
-
-  const general=[
-    ["PO No",c?.po||valueText(d.System_PO_Number)||valueText(d.PO_Number),"Selected Payment Requisition",false],
-    ["Vendor Name",c?.vendor||valueText(d.System_Vendor_Name)||valueText(d.Vendor_Name_Import),"Selected Payment Requisition",false],
-    ["Payment Record Date",tallyFirstValue(d,["Payment_Record_Date_Import"]),"Tally / Reconciliation",false],
-    ["Payment Request Date",tallyFirstValue(pr,["Payment_Request_Date"])||tallyFirstValue(d,["Payment_Request_Date_Import"]),"Payment Requisition",false],
-    ["Payment Type",tallyFirstValue(pr,["Payment_Type"])||tallyFirstValue(d,["Payment_Type_Import"]),"Payment Requisition",false],
-    ["Ref No",tallyFirstValue(pr,["Ref_No","Reference_No","Reference_Number"]),"Payment Requisition",false],
-    ["Approved Amount",tallyFirstValue(pr,["Approved_Amount","Total","Payable_Amount"]),"Payment Requisition",true],
-    ["Approved Amount($)",tallyFirstValue(pr,["Approved_Amount_USD","Approved_Amount_Dollar","Total_USD"]),"Payment Requisition",false],
-    ["Currency Name",tallyFirstValue(pr,["Currency_Name","Currency","Currency_Type"]),"Payment Requisition",false],
-    ["Payment Request Status",tallyFirstValue(pr,["Payment_Request_Status","Request_Status","Status"]),"Payment Requisition",false],
-    ["Payment Record Status",tallyFirstValue(pr,["Payment_Record_Status","Record_Status"]),"Payment Requisition",false],
-    ["Payment Details",tallyFirstValue(pr,["Payment_Details","Payment_Detail"]),"Payment Requisition",false],
-    ["Imported Amount",imported,"Tally / Reconciliation",true],
-    ["Amount Difference",Math.abs(imported-eligible),"Calculated match",true],
-    ["Difference Percentage",amountDiffPct(imported,eligible).toFixed(3)+"%","Calculated match",false],
-    ["Match Score",String(Math.round(Number(c?.score||d.Match_Score||0)))+" / 100","Selected match",false],
-    ["Reconciled On",dateTimeForCreator(),"System",false],
-    ["Payment Requisition",`${c?.po||"PR"} · ID ${r.selectedPRID||"—"}`,"Selected Payment Requisition",false]
-  ];
-
-  const calc=[
-    ["Request Basic Amount",tallyFirstValue(pr,["Basic","Request_Basic_Amount","Subtotal","Sub_Total"]),"Payment Requisition",true],
-    ["Percentage",tallyFirstValue(pr,["Percentage","Payment_Percentage","Payment"]),"Payment Requisition",false],
-    ["Running IGST",tallyFirstValue(pr,["Running_IGST","IGST"]),"Payment Requisition",true],
-    ["Running CGST",tallyFirstValue(pr,["Running_CGST","CGST"]),"Payment Requisition",true],
-    ["Running SGST",tallyFirstValue(pr,["Running_SGST","SGST"]),"Payment Requisition",true],
-    ["Running Total",tallyFirstValue(pr,["Running_Total"]),"Payment Requisition",true],
-    ["Deduction from Advance",tallyFirstValue(pr,["Deduction_from_Advance","Deduction_From_Advance"]),"Payment Requisition",true],
-    ["Deduction From Retention",tallyFirstValue(pr,["Deduction_From_Retention","Deduction_from_Retention"]),"Payment Requisition",true],
-    ["Total Deduction",tallyFirstValue(pr,["Total_Deduction"]),"Payment Requisition",true],
-    ["Eligible Payable Amount",eligible,"Selected Payment Requisition",true],
-    ["Already Paid",alreadyPaid,"Existing Payment_detals2",true],
-    ["Remaining Before This Payment",remainingBefore,"Calculated from accepted Payment_detals2",true],
-    ["Payment Done",imported,"Tally / Reconciliation",true],
-    ["Remaining Amount",remainingAfter,"Backend payment balance preview",true],
-    ["Remaining Against PO",tallyFirstValue(pr,["Remaning_Against_PO","Remaining_Against_PO"]),"Payment Requisition",true],
-    ["Running PO",tallyFirstValue(pr,["Running_PO"]),"Payment Requisition",true],
-    ["Previous Remaining From Request",tallyFirstValue(pr,["Previous_Remaining_From_Request"]),"Payment Requisition",true],
-    ["Last Payment",remainingAfter===0?"Yes":"No","Calculated",false]
-  ];
-
-  const usd=[
-    ["Request Basic Amount($)",tallyFirstValue(pr,["Request_Basic_Amount_USD","Request_Basic_Amount_Dollar","Basic_USD"]),"Payment Requisition",false],
-    ["Running IGST($)",tallyFirstValue(pr,["Running_IGST_USD","Running_IGST_Dollar"]),"Payment Requisition",false],
-    ["Running Total($)",tallyFirstValue(pr,["Running_Total_USD","Running_Total_Dollar"]),"Payment Requisition",false],
-    ["Deduction from Advance($)",tallyFirstValue(pr,["Deduction_from_Advance_USD","Deduction_from_Advance_Dollar"]),"Payment Requisition",false],
-    ["Deduction From Retention($)",tallyFirstValue(pr,["Deduction_From_Retention_USD","Deduction_From_Retention_Dollar"]),"Payment Requisition",false],
-    ["Total Deduction($)",tallyFirstValue(pr,["Total_Deduction_USD","Total_Deduction_Dollar"]),"Payment Requisition",false],
-    ["Eligible Payable Amount($)",tallyFirstValue(pr,["Eligible_Payment_USD","Eligible_Payable_Amount_USD","Eligible_Payable_Amount_Dollar"]),"Payment Requisition",false],
-    ["Payment Done($)",tallyFirstValue(d,["Imported_Amount_USD","Payment_Done_USD"]),"Reconciliation when available",false],
-    ["Remaining Amount($)",tallyFirstValue(pr,["Remaining_Amount_USD","Remaining_Amount_Dollar"]),"Payment Requisition",false],
-    ["Remaining Against PO($)",tallyFirstValue(pr,["Remaning_Against_PO_USD","Remaining_Against_PO_USD"]),"Payment Requisition",false],
-    ["Running PO($)",tallyFirstValue(pr,["Running_PO_USD","Running_PO_Dollar"]),"Payment Requisition",false],
-    ["Previous Remaining From Request($)",tallyFirstValue(pr,["Previous_Remaining_From_Request_USD","Previous_Remaining_From_Request_Dollar"]),"Payment Requisition",false]
-  ];
-
-  const method=[
-    ["Bank Name",tallyFirstValue(d,["Bank_Name_Import"]),"Tally / Reconciliation",false],
-    ["Paid Through",tallyFirstValue(d,["Paid_Through_Import"]),"Tally / Reconciliation",false],
-    ["Account Number",tallyFirstValue(d,["Account_Number_Import","Account_Number"]),"Tally / Reconciliation when available",false],
-    ["UTR No",tallyFirstValue(d,["UTR_No_Import"]),"Tally / Reconciliation",false],
-    ["Transaction ID",tallyFirstValue(d,["Transaction_ID_Import"]),"Tally / Reconciliation",false],
-    ["Cheque No",tallyFirstValue(d,["Cheque_No_Import"]),"Tally / Reconciliation",false],
-    ["Remark / Note",tallyFirstValue(d,["Payment_Remark_Import","Remarks"]),"Tally / Reconciliation",false],
-    ["Attachment","—","No attachment source in reconciliation",false]
-  ];
-
-  return {general,calc,usd,method,remainingAfter,eligible,imported,alreadyPaid,pr,c};
-}
-
-function renderPreviewSection(title,fields){
-  return `<section class="preview-section"><div class="preview-section-head">${htmlEscape(title)}</div><div class="preview-grid">${fields.map(x=>previewValue(...x)).join("")}</div></section>`;
-}
-
-function openTallyReview(recordId){
-  const r=STATE.tallyRows.find(x=>x.id===String(recordId));
-  if(!r){toast("Tally reconciliation row was not found.","error");return}
-  if(!r.selectedPRID){toast("Use Suggest / Change PO and select a Payment Requisition first.","error");return}
-  STATE.tallyReviewRowId=String(recordId);
-  const p=tallyBuildPreview(r);
-  const warning=p.remainingAfter < -CONFIG.exactAmountTolerance
-    ? `<div class="preview-warning"><b>Overpayment warning:</b> this payment is greater than the calculated remaining amount by ${money(Math.abs(p.remainingAfter))}. If you continue, this overpayment will be sent to the backend as an explicitly confirmed overpayment.</div>`
-    : `<div class="preview-ok"><b>Ready for review.</b> This preview uses the selected Payment Requisition plus the Tally reconciliation record. Blank fields mean that no source value was returned. The backend remains authoritative for final payment balance and locking.</div>`;
-
-  document.getElementById("tallyReviewBody").innerHTML=`
-    <div class="preview-intro"><b>${htmlEscape(p.c?.po||"Selected PR")}</b> · ${htmlEscape(p.c?.vendor||"—")} · Tally payment <b>${money(p.imported)}</b>. Review the sections below before accepting.</div>
-    ${warning}
-    ${renderPreviewSection("Payment Details",p.general)}
-    ${renderPreviewSection("Calculations (INR)",p.calc)}
-    ${renderPreviewSection("Calculations ($)",p.usd)}
-    ${renderPreviewSection("Payment Method",p.method)}
-    <div class="preview-warning"><b>Bank Name / Paid Through:</b> if these are lookup fields in Payment_detals2, Build v13 only updates them when the Tally text can be resolved to an existing Creator value. It does not force plain text into a lookup.</div>`;
-  document.getElementById("tallyReviewAcceptBtn").disabled=false;
-  document.getElementById("tallyReviewModal").classList.remove("hidden");
-}
-
-function closeTallyReview(){
-  document.getElementById("tallyReviewModal").classList.add("hidden");
-  STATE.tallyReviewRowId=null;
-}
-
-async function getFreshPaymentDetailById(id){
-  try{
-    if(ZOHO.CREATOR.DATA.getRecordById){
-      const res=await ZOHO.CREATOR.DATA.getRecordById({
-        app_name:CONFIG.appName,
-        report_name:CONFIG.paymentDetailsReport,
-        id:String(id)
-      });
-      if(res && res.data) return res.data;
-    }
-  }catch(err){
-    console.warn("Could not fetch newly created Payment_detals2 record.",err);
-  }
-  return STATE.paymentDetails.find(x=>String(x.ID)===String(id)) || null;
-}
-
-function addResolvedField(data,targetSample,targetAliases,value){
-  if(value===null || value===undefined || String(valueText(value)).trim()==="") return;
-  putIfTargetExists(data,targetSample,targetAliases,value);
-}
-
-function buildTallyPaymentDetailEnrichment(r,targetSample){
-  const p=tallyBuildPreview(r);
-  const pr=p.pr || {};
-  const d=r.raw || {};
-  const f=CONFIG.paymentDetailsFields;
-  const groups={general:{},calc:{},usd:{},method:{},audit:{}};
-
-  addResolvedField(groups.general,targetSample,["Payment_Record_Date","PaymentRecordDate"],tallyFirstValue(d,["Payment_Record_Date_Import"])||todayForCreator());
-  addResolvedField(groups.general,targetSample,["Payment_Request_Date","PaymentRequestDate"],tallyFirstValue(pr,["Payment_Request_Date"])||tallyFirstValue(d,["Payment_Request_Date_Import"]));
-  addResolvedField(groups.general,targetSample,["Payment_Type","PaymentType"],tallyFirstValue(pr,["Payment_Type"])||tallyFirstValue(d,["Payment_Type_Import"]));
-  addResolvedField(groups.general,targetSample,["Ref_No","Reference_No","Reference_Number"],tallyFirstValue(pr,["Ref_No","Reference_No","Reference_Number"]));
-  addResolvedField(groups.general,targetSample,["Payment_Request_Status","PaymentRequestStatus"],tallyFirstValue(pr,["Payment_Request_Status","Request_Status","Status"]));
-  addResolvedField(groups.general,targetSample,["Payment_Record_Status","PaymentRecordStatus"],tallyFirstValue(pr,["Payment_Record_Status","Record_Status"]));
-  addResolvedField(groups.general,targetSample,["Payment_Details","PaymentDetails","Payment_Detail"],tallyFirstValue(pr,["Payment_Details","Payment_Detail"]));
-  addResolvedField(groups.general,targetSample,["Currency_Name","Currency"],tallyFirstValue(pr,["Currency_Name","Currency","Currency_Type"]));
-  addResolvedField(groups.general,targetSample,["Approved_Amount","Total","Payable_Amount"],tallyFirstValue(pr,["Approved_Amount","Total","Payable_Amount"]));
-
-  addResolvedField(groups.calc,targetSample,["Request_Basic_Amount","Basic","Subtotal","Sub_Total"],tallyFirstValue(pr,["Basic","Request_Basic_Amount","Subtotal","Sub_Total"]));
-  addResolvedField(groups.calc,targetSample,["Percentage","Payment_Percentage","Payment"],tallyFirstValue(pr,["Percentage","Payment_Percentage","Payment"]));
-  [
-    [["Running_IGST"],["Running_IGST","IGST"]],
-    [["Running_CGST"],["Running_CGST","CGST"]],
-    [["Running_SGST"],["Running_SGST","SGST"]],
-    [["Running_Total"],["Running_Total"]],
-    [["Deduction_from_Advance","Deduction_From_Advance"],["Deduction_from_Advance","Deduction_From_Advance"]],
-    [["Deduction_From_Retention","Deduction_from_Retention"],["Deduction_From_Retention","Deduction_from_Retention"]],
-    [["Total_Deduction"],["Total_Deduction"]],
-    [["Remaning_Against_PO","Remaining_Against_PO"],["Remaning_Against_PO","Remaining_Against_PO"]],
-    [["Running_PO"],["Running_PO"]],
-    [["Previous_Remaining_From_Request"],["Previous_Remaining_From_Request"]]
-  ].forEach(([targets,sources])=>addResolvedField(groups.calc,targetSample,targets,tallyFirstValue(pr,sources)));
-  addResolvedField(groups.calc,targetSample,["Eligible_Payable_Amount","EligiblePayment"],p.eligible);
-  addResolvedField(groups.calc,targetSample,["Payment_Done","PaymentDone"],p.imported);
-
-  [
-    [["Approved_Amount_USD","Approved_Amount_Dollar"],["Approved_Amount_USD","Approved_Amount_Dollar","Total_USD"]],
-    [["Request_Basic_Amount_USD","Request_Basic_Amount_Dollar"],["Request_Basic_Amount_USD","Request_Basic_Amount_Dollar","Basic_USD"]],
-    [["Running_IGST_USD","Running_IGST_Dollar"],["Running_IGST_USD","Running_IGST_Dollar"]],
-    [["Running_Total_USD","Running_Total_Dollar"],["Running_Total_USD","Running_Total_Dollar"]],
-    [["Deduction_from_Advance_USD","Deduction_from_Advance_Dollar"],["Deduction_from_Advance_USD","Deduction_from_Advance_Dollar"]],
-    [["Deduction_From_Retention_USD","Deduction_From_Retention_Dollar"],["Deduction_From_Retention_USD","Deduction_From_Retention_Dollar"]],
-    [["Total_Deduction_USD","Total_Deduction_Dollar"],["Total_Deduction_USD","Total_Deduction_Dollar"]],
-    [["Eligible_Payable_Amount_USD","Eligible_Payable_Amount_Dollar"],["Eligible_Payment_USD","Eligible_Payable_Amount_USD","Eligible_Payable_Amount_Dollar"]],
-    [["Running_PO_USD","Running_PO_Dollar"],["Running_PO_USD","Running_PO_Dollar"]],
-    [["Previous_Remaining_From_Request_USD","Previous_Remaining_From_Request_Dollar"],["Previous_Remaining_From_Request_USD","Previous_Remaining_From_Request_Dollar"]],
-    [["Remaning_Against_PO_USD","Remaining_Against_PO_USD"],["Remaning_Against_PO_USD","Remaining_Against_PO_USD"]]
-  ].forEach(([targets,sources])=>addResolvedField(groups.usd,targetSample,targets,tallyFirstValue(pr,sources)));
-  addResolvedField(groups.usd,targetSample,["Payment_Done_USD","Payment_Done_Dollar"],tallyFirstValue(d,["Imported_Amount_USD","Payment_Done_USD"]));
-
-  const bankText=tallyFirstText(d,["Bank_Name_Import"]);
-  if(bankText){
-    const resolvedBank=resolveChoiceOrLookupValue(f.bankName,bankText);
-    if(resolvedBank!==null) addResolvedField(groups.method,targetSample,[f.bankName,"Bank_Name"],resolvedBank);
-  }
-  const paidThroughText=tallyFirstText(d,["Paid_Through_Import"]);
-  if(paidThroughText){
-    const resolved=resolveChoiceOrLookupValue(f.paidThrough,paidThroughText);
-    if(resolved!==null) addResolvedField(groups.method,targetSample,[f.paidThrough,"Paid_Through"],resolved);
-  }
-  addResolvedField(groups.method,targetSample,[f.accountNumber,"Account_Number"],tallyFirstValue(d,["Account_Number_Import","Account_Number"]));
-  addResolvedField(groups.method,targetSample,[f.utr,"UTR_No"],tallyFirstValue(d,["UTR_No_Import"]));
-  addResolvedField(groups.method,targetSample,[f.transactionId,"Transaction_ID"],tallyFirstValue(d,["Transaction_ID_Import"]));
-  addResolvedField(groups.method,targetSample,[f.chequeNo,"Cheque_No"],tallyFirstValue(d,["Cheque_No_Import"]));
-
-  const existingRemark=valueText(targetSample[f.remarkNote]||targetSample.Remark_Note||"");
-  const tallyRemark=tallyFirstText(d,["Payment_Remark_Import"]);
-  if(tallyRemark && !existingRemark.includes(tallyRemark)){
-    addResolvedField(groups.method,targetSample,[f.remarkNote,"Remark_Note"],[existingRemark,tallyRemark].filter(Boolean).join(" | "));
-  }
-
-  addResolvedField(groups.audit,targetSample,[f.importedAmount,"Imported_Amount"],p.imported);
-  addResolvedField(groups.audit,targetSample,[f.amountDifference,"Amount_Difference"],round2(Math.abs(p.imported-p.eligible)));
-  addResolvedField(groups.audit,targetSample,[f.differencePercentage,"Difference_Percentage"],round2(amountDiffPct(p.imported,p.eligible)));
-  addResolvedField(groups.audit,targetSample,[f.matchScore,"Match_Score"],Number(p.c?.score||0));
-  return groups;
-}
-
-async function updatePaymentDetailGroup(recordId,data){
-  const keys=Object.keys(data||{});
-  if(!keys.length) return {updated:0,failed:[]};
-  try{
-    const res=await ZOHO.CREATOR.DATA.updateRecordById({
-      app_name:CONFIG.appName,
-      report_name:CONFIG.paymentDetailsReport,
-      id:String(recordId),
-      payload:{data,skip_workflow:["form_workflow"]}
-    });
-    if(res && res.code && Number(res.code)!==3000) throw new Error(res.message||JSON.stringify(res));
-    return {updated:keys.length,failed:[]};
-  }catch(groupErr){
-    let updated=0;
-    const failed=[];
-    for(const key of keys){
-      try{
-        const res=await ZOHO.CREATOR.DATA.updateRecordById({
-          app_name:CONFIG.appName,
-          report_name:CONFIG.paymentDetailsReport,
-          id:String(recordId),
-          payload:{data:{[key]:data[key]},skip_workflow:["form_workflow"]}
-        });
-        if(res && res.code && Number(res.code)!==3000) throw new Error(res.message||JSON.stringify(res));
-        updated++;
-      }catch(err){
-        failed.push(`${key}: ${err.message||String(err)}`);
-      }
-    }
-    return {updated,failed};
-  }
-}
-
-async function enrichAcceptedPaymentDetail(r,paymentDetailId){
-  if(!paymentDetailId) return {updated:0,failed:["Payment Details ID was not returned by the backend."]};
-  const target=await getFreshPaymentDetailById(paymentDetailId);
-  if(!target) return {updated:0,failed:["New Payment_detals2 record could not be loaded for enrichment."]};
-  const groups=buildTallyPaymentDetailEnrichment(r,target);
-  let updated=0;
-  const failed=[];
-  for(const name of ["general","calc","usd","method","audit"]){
-    const result=await updatePaymentDetailGroup(paymentDetailId,groups[name]);
-    updated+=result.updated;
-    failed.push(...result.failed.map(x=>`${name}: ${x}`));
-  }
-  return {updated,failed};
-}
-
-function extractPaymentDetailId(response){
-  const direct=response?.data?.ID || response?.data?.id || response?.ID || response?.id;
-  if(direct && /^\d+$/.test(String(direct))) return String(direct);
-  const text=customApiMessage(response) + " " + (()=>{try{return JSON.stringify(response)}catch(_e){return ""}})();
-  const m=String(text).match(/Payment\s*Details\s*ID\s*:\s*(\d+)/i);
-  return m ? m[1] : "";
-}
-
-let TALLY_ACCEPT_POPUP_RESOLVER=null;
-
-function resolveTallyAcceptPopup(result){
-  const popup=document.getElementById("tallyAcceptPopup");
-  if(popup) popup.classList.add("hidden");
-  const resolver=TALLY_ACCEPT_POPUP_RESOLVER;
-  TALLY_ACCEPT_POPUP_RESOLVER=null;
-  if(resolver) resolver(!!result);
-}
-
-function showTallyAcceptPopup(options){
-  options=options||{};
-  const type=options.type||"confirm"; // confirm | warning | blocked
-  const popup=document.getElementById("tallyAcceptPopup");
-  const card=document.getElementById("tallyAcceptPopupCard");
-  const icon=document.getElementById("tallyAcceptPopupIcon");
-  const title=document.getElementById("tallyAcceptPopupTitle");
-  const message=document.getElementById("tallyAcceptPopupMessage");
-  const details=document.getElementById("tallyAcceptPopupDetails");
-  const cancelBtn=document.getElementById("tallyAcceptPopupCancelBtn");
-  const okBtn=document.getElementById("tallyAcceptPopupOkBtn");
-
-  card.className="accept-check-modal "+type;
-  icon.textContent=type==="blocked"?"!":(type==="warning"?"⚠":"✓");
-  title.textContent=options.title||"Confirm Payment";
-  message.textContent=options.message||"";
-
-  const rows=Array.isArray(options.details)?options.details:[];
-  details.innerHTML=rows.map(row=>`
-    <div class="accept-check-row">
-      <div class="k">${htmlEscape(row[0]||"")}</div>
-      <div class="v">${htmlEscape(row[1]===undefined||row[1]===null?"—":String(row[1]))}</div>
-    </div>`).join("") || '<div class="accept-check-row"><div class="v" style="grid-column:1/-1">No additional details.</div></div>';
-
-  const showCancel=options.showCancel!==false && type!=="blocked";
-  cancelBtn.classList.toggle("hidden",!showCancel);
-  cancelBtn.textContent=options.cancelText||"Cancel";
-  okBtn.textContent=options.confirmText||(type==="blocked"?"OK":(type==="warning"?"Continue & Accept":"Accept Payment"));
-  okBtn.className="btn "+(type==="warning"?"warning-action":"primary");
-
-  popup.classList.remove("hidden");
-  return new Promise(resolve=>{TALLY_ACCEPT_POPUP_RESOLVER=resolve;});
-}
-
-function findTallyDuplicatePayment(r){
-  const d=r?.raw||{};
-  const utr=String(valueText(d.UTR_No_Import)||"").trim().toUpperCase();
-  const txn=String(valueText(d.Transaction_ID_Import)||"").trim().toUpperCase();
-
-  for(const rec of STATE.paymentDetails){
-    const pd=pdView(rec);
-    if(utr && String(pd.utr||"").trim().toUpperCase()===utr){
-      return {type:"UTR",value:utr,recordId:pd.id};
-    }
-    if(txn && String(pd.transactionId||"").trim().toUpperCase()===txn){
-      return {type:"Transaction ID",value:txn,recordId:pd.id};
-    }
-  }
-  return null;
-}
-
-function buildTallyAcceptCheck(r){
-  const d=r?.raw||{};
-  const c=tallySelectedCandidate(r);
-  const pr=tallySelectedPRRaw(r)||{};
-  const imported=cleanAmount(d.Imported_Amount);
-  const status=valueText(d.Match_Status).trim();
-  const createdPaymentDetail=tallyLookupId(d.Created_Payment_Detail) || valueText(d.Created_Payment_Detail).trim();
-
-  const baseDetails=[
-    ["Tally PO",valueText(d.PO_Number)||"—"],
-    ["Selected Creator PO",c?.po||"—"],
-    ["Vendor",c?.vendor||valueText(d.Vendor_Name_Import)||"—"],
-    ["Tally Payment",money(imported)],
-    ["UTR",valueText(d.UTR_No_Import)||"—"],
-    ["Transaction ID",valueText(d.Transaction_ID_Import)||"—"]
-  ];
-
-  if(!c || !r.selectedPRID){
-    return {blocked:true,title:"Payment Requisition Required",message:"Select a Payment Requisition before accepting this Tally payment.",details:baseDetails};
-  }
-
-  if(status==="Accepted" || createdPaymentDetail){
-    return {blocked:true,title:"Already Accepted",message:"This reconciliation has already been accepted. A second payment record cannot be created.",details:baseDetails.concat([["Created Payment Detail",createdPaymentDetail||"Already Accepted"]])};
-  }
-
-  const eligible=cleanAmount(pr[CONFIG.paymentRequisitionFields.eligible]);
-  if(!(eligible>0)){
-    return {blocked:true,title:"Eligible Payment Missing",message:"Eligible Payment is blank or zero. Payment cannot be accepted.",details:baseDetails.concat([["Eligible Payment",money(eligible)]])};
-  }
-
-  const duplicate=findTallyDuplicatePayment(r);
-  if(duplicate){
-    return {blocked:true,title:`Duplicate ${duplicate.type}`,message:`This ${duplicate.type} already exists in Payment Details. Payment cannot be accepted again.`,details:baseDetails.concat([["Existing Payment Detail ID",duplicate.recordId||"—"]])};
-  }
-
-  const alreadyPaid=tallyAlreadyPaidForPR(r.selectedPRID);
-  const remainingBefore=Math.max(0,round2(eligible-alreadyPaid));
-  const excess=round2(imported-remainingBefore);
-  const common=baseDetails.concat([
-    ["Eligible Payment",money(eligible)],
-    ["Already Paid",money(alreadyPaid)],
-    ["Remaining Before",money(remainingBefore)]
-  ]);
-
-  if(excess>CONFIG.exactAmountTolerance){
-    return {
-      blocked:false,
-      warning:true,
-      title:"Overpayment Warning",
-      message:`Tally payment exceeds the remaining Eligible Payment by ${money(excess)}. Review the amounts carefully before continuing.`,
-      details:common.concat([["Excess Amount",money(excess)]])
-    };
-  }
-
-  return {
-    blocked:false,
-    warning:false,
-    title:"Confirm Payment Acceptance",
-    message:"All blocking validations passed. Confirm to create the Payment Details entry and lock this reconciliation.",
-    details:common.concat([["Remaining After",money(Math.max(0,round2(remainingBefore-imported))) ]])
-  };
-}
-
-async function acceptTallyFromReview(){
-  const id=STATE.tallyReviewRowId;
-  if(!id) return;
-  const r=STATE.tallyRows.find(x=>x.id===String(id));
-  if(!r){toast("Tally reconciliation row was not found.","error");return}
-
-  const check=buildTallyAcceptCheck(r);
-
-  if(check.blocked){
-    await showTallyAcceptPopup({
-      type:"blocked",
-      title:check.title,
-      message:check.message,
-      details:check.details,
-      showCancel:false,
-      confirmText:"OK"
-    });
-    return;
-  }
-
-  const confirmed=await showTallyAcceptPopup({
-    type:check.warning?"warning":"confirm",
-    title:check.title,
-    message:check.message,
-    details:check.details,
-    confirmText:check.warning?"Continue & Accept":"Accept Payment",
-    cancelText:"Cancel"
-  });
-  if(!confirmed) return;
-
-  const btn=document.getElementById("tallyReviewAcceptBtn");
-  if(btn) btn.disabled=true;
-  try{
-    await tallyAccept(id,check.warning===true);
-    closeTallyReview();
-  }catch(err){
+    STATE.ready=false; STATE.error=err;
+    setConnection(false,"Creator connection failed");
+    document.getElementById("reportTitle").textContent="Could not load data";
+    document.getElementById("reportBody").innerHTML=`<div class="empty"><strong>${htmlEscape(err.message||String(err))}</strong>Open Diagnostics, check the report names in CONFIG, and make sure this page is opened as a Creator widget.</div>`;
     toast(err.message||String(err),"error");
-  }finally{
-    if(btn) btn.disabled=false;
   }
 }
 
-function customApiMessage(response){
-  if(response===null || response===undefined) return "";
-  if(typeof response==="string") return response;
-  const preferred=["result","data","message","response"];
-  for(const k of preferred){
-    if(typeof response[k]==="string" && response[k].trim()) return response[k].trim();
-    if(response[k] && typeof response[k]==="object"){
-      const nested=customApiMessage(response[k]);
-      if(nested) return nested;
-    }
-  }
-  try{return JSON.stringify(response)}catch(_e){return String(response)}
-}
-
-// Save the user's selected Payment Requisition back to Payment_Reconciliation_Import
-// through Match_Invoce_Report. This replaces the old Match_Suggestions subform dependency.
-async function persistTallySelectedMatch(r,c){
-  if(!r || !c) throw new Error("Select a Payment Requisition before accepting.");
-  if(!(ZOHO.CREATOR.DATA && ZOHO.CREATOR.DATA.updateRecordById)){
-    throw new Error("Creator Update Record API is not available in this widget session.");
-  }
-
-  const imported=cleanAmount(r.raw.Imported_Amount);
-  const difference=round2(Math.abs(imported-Number(c.amount||0)));
-  const differencePct=round2(amountDiffPct(imported,Number(c.amount||0)));
-
-  const data={
-    Matched_Payment_Requisition:String(c.id),
-    System_PO_Number:String(c.po||""),
-    System_Project_Code:String(c.project||""),
-    System_Vendor_Name:String(c.vendor||""),
-    System_Amount:Number(c.amount||0),
-    Amount_Difference:difference,
-    Difference_Percentage:differencePct,
-    Match_Score:Number(c.score||0)
-  };
-
-  const response=await ZOHO.CREATOR.DATA.updateRecordById({
-    app_name:CONFIG.appName,
-    report_name:CONFIG.tallyImportReport,
-    id:String(r.id),
-    payload:{
-      data,
-      skip_workflow:["form_workflow"]
-    }
-  });
-
-  if(response && response.code && Number(response.code)!==3000){
-    const creatorErrors=Array.isArray(response.error)?response.error.join(" | "):"";
-    throw new Error(creatorErrors || response.message || JSON.stringify(response));
-  }
-
-  // Keep the row display synchronized until the report is reloaded after Accept.
-  r.raw.Matched_Payment_Requisition={ID:String(c.id)};
-  r.raw.System_PO_Number=c.po||"";
-  r.raw.System_Project_Code=c.project||"";
-  r.raw.System_Vendor_Name=c.vendor||"";
-  r.raw.System_Amount=Number(c.amount||0);
-  r.raw.Amount_Difference=difference;
-  r.raw.Difference_Percentage=differencePct;
-  r.raw.Match_Score=Number(c.score||0);
-
-  return response;
-}
-
-async function invokeTallyAction(r,action){
-  if(!r) throw new Error("Tally reconciliation row was not found.");
-  if(r.busy) return;
-  const isAcceptAction=String(action||"").toUpperCase().startsWith("ACCEPT");
-  if(isAcceptAction && !r.selectedPRID) throw new Error("Select a Payment Requisition before accepting.");
-
-  r.busy=true;
-  renderTallyTable();
-  try{
-    const cfg={
-      api_name:CONFIG.tallyActionApi,
-      http_method:"POST",
-      content_type:"application/json",
-      payload:{
-        reconciliationID:String(r.id),
-        action:String(action),
-        selectedPaymentRequisitionID:isAcceptAction?String(r.selectedPRID||""):""
-      }
-    };
-    const response=await ZOHO.CREATOR.DATA.invokeCustomApi(cfg);
-    const msg=customApiMessage(response);
-    const full=typeof response==="string"?response:(()=>{try{return JSON.stringify(response)}catch(_e){return msg}})();
-    const errorMatch=String(full||"").match(/ERROR\|[^"}\\]*/i);
-    if(errorMatch) throw new Error(errorMatch[0].replace(/^ERROR\|/i,""));
-    if(response && response.code && ![200,201,202,3000].includes(Number(response.code))){
-      throw new Error(msg || `Custom API failed with code ${response.code}`);
-    }
-    const successText=(msg && msg.includes("SUCCESS|")) ? msg.replace(/^SUCCESS\|/i,"") : "Payment accepted successfully.";
-    const newPaymentDetailId=extractPaymentDetailId(response);
-
-    // Backend remains authoritative for creation/locking. After creation, enrich the
-    // newly-created Payment_detals2 record with other available PR + reconciliation fields.
-    if(isAcceptAction && newPaymentDetailId){
-      const enrichment=await enrichAcceptedPaymentDetail(r,newPaymentDetailId);
-      if(enrichment.failed.length){
-        console.warn("Payment detail enrichment skipped some fields:",enrichment.failed);
-        toast(`${successText} Additional fields updated: ${enrichment.updated}. Some fields were skipped; see console/Diagnostics.`,"success");
-      }else{
-        toast(`${successText} Additional Payment Details fields updated: ${enrichment.updated}.`,"success");
-      }
-    }else{
-      toast(successText,"success");
-    }
-
-    await loadTallyPayments(false);
-    // Refresh Payment Details count/cache because Accept creates a new Payment_detals2 record.
-    try{await refreshCreatorData()}catch(_e){}
-    return response;
-  }finally{
-    r.busy=false;
-    renderTallyTable();
-  }
-}
-
-async function tallyAccept(recordId,allowOverpayment){
-  const r=STATE.tallyRows.find(x=>x.id===String(recordId));
-  if(!r) throw new Error("Tally reconciliation row was not found.");
-  const c=tallySelectedCandidate(r);
-  if(!c) throw new Error("Use Suggest / Change PO and select a Payment Requisition before accepting.");
-
-  try{
-    r.busy=true;
-    renderTallyTable();
-    await persistTallySelectedMatch(r,c);
-    r.busy=false;
-    renderTallyTable();
-    return await invokeTallyAction(r,allowOverpayment?"ACCEPT_OVERPAYMENT":"ACCEPT");
-  }catch(err){
-    r.busy=false;
-    renderTallyTable();
-    throw err;
-  }
-}
-
-/* ============================== STARTUP ==================================== */
 window.addEventListener("load",async()=>{
-  // JS API v2 requires the V2 SDK script but no init() call.
-  // Give the SDK a short moment when the external page is being embedded.
   await new Promise(r=>setTimeout(r,250));
-  try{
-    await refreshCreatorData();
-  }catch(err){
-    // refreshCreatorData already renders the error
-  }
+  refreshData();
 });
 </script>
 </body>
