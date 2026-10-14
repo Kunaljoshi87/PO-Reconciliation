@@ -3491,7 +3491,8 @@ const CONFIG = {
     project: ["Project_Code","Project"],
     // Amount the payments are compared with. Change the first name if your
     // PO value (e.g. including GST) lives in a different field.
-    amount:  ["Sub_Total_in_INR","Total_in_INR","Total_Amount","Sub_Total"],
+    amount:  ["Sub_Total_in_INR","Total_in_INR","Total_Amount","Sub_Total"],   // before GST
+    total:   ["Total_in_INR","Grand_Total_in_INR","Grand_Total","Total_Amount","Total_with_GST"], // incl. GST (fallback if requisitions carry no Total)
     date:    ["PO_Date","Date","Added_Time"],
     grn:     ["GRN_Status","GRN","GRN_Received","GRN_Done"]
   },
@@ -3503,6 +3504,8 @@ const CONFIG = {
     // Eligible_Payment is calculated in Creator as:
     //   Payable_Amount  (+ Remaning_Against_PO only when Last_Payment is true)
     // When Eligible_Payment is blank, the widget calculates it the same way.
+    total: "Total",          // requisition Total = PO total INCLUDING GST (used as the PO limit)
+    subtotal: "Subtotal",    // before GST
     basic: "Basic",
     payable: "Payable_Amount",
     lastPayment: "Last_Payment",
@@ -3630,6 +3633,8 @@ function resolveKey(record, candidates){
 function reqAmounts(rec){
   const R=CONFIG.requisitionFields;
   const g=name=>{ const k=resolveKey(rec,[name]); return k?rec[k]:undefined; };
+  const gt=names=>{ const k=resolveKey(rec,names); return k?rec[k]:undefined; };
+  const total=cleanAmount(gt([R.total,"Total","Total_Amount","Total_in_INR","Grand_Total"]));
   const basic=cleanAmount(g(R.basic)), payable=cleanAmount(g(R.payable));
   const lr=g(R.lastPayment);
   const last=lr===true || /^(true|yes|1)$/i.test(valueText(lr).trim());
@@ -3637,7 +3642,7 @@ function reqAmounts(rec){
   const calc=payable+remaining;
   const stored=cleanAmount(rec[R.eligible]);
   const eligible=stored>0?stored:calc;
-  return {basic,payable,remaining,last,stored,eligible,fromCalc:!(stored>0)&&calc>0};
+  return {basic,payable,remaining,last,stored,eligible,total,fromCalc:!(stored>0)&&calc>0};
 }
 function round2(n){ return Math.round((Number(n||0)+Number.EPSILON)*100)/100; }
 function money(n){
@@ -3798,7 +3803,7 @@ function buildModel(){
     const pr={
       id:String(rec.ID||""), po,
       date:parseDate(rec[R.date]), type:valueText(rec[R.type]), status,
-      eligible:am.eligible, fromCalc:am.fromCalc, pays:[], paid:0
+      eligible:am.eligible, total:am.total, fromCalc:am.fromCalc, pays:[], paid:0
     };
     po.reqs.push(pr);
     if(pr.id) prById[pr.id]=pr;
@@ -3851,6 +3856,18 @@ function buildModel(){
   }
 
   // Totals
+  let srcReq=0,srcPo=0,srcBasic=0;
+  pos.forEach(po=>{
+    // PO limit = PO total INCLUDING GST (payments are made with GST, so comparing with the
+    // before-tax subtotal would wrongly show every GST amount as "excess").
+    po.basicAmount=po.amount;
+    const reqTotal=po.reqs.reduce((m,p)=>Math.max(m,p.total||0),0);
+    const poTotal=K.total?cleanAmount(po.raw[K.total]):0;
+    if(reqTotal>0){ po.amount=reqTotal; po.amountSrc="requisition"; srcReq++; }
+    else if(poTotal>po.basicAmount){ po.amount=poTotal; po.amountSrc="po"; srcPo++; }
+    else { po.amountSrc="basic"; srcBasic++; }
+  });
+  STATE.amountSources={requisition:srcReq,po:srcPo,basic:srcBasic};
   pos.forEach(po=>{
     po.reqs.forEach(pr=>{ pr.paid=round2(pr.pays.reduce((s,p)=>s+p.done,0)); });
     po.requested=round2(po.reqs.reduce((s,p)=>s+p.eligible,0));
@@ -4048,7 +4065,7 @@ const REPORTS={
       {h:"PO No",f:p=>poCell(p),v:p=>p.no},
       {h:"Vendor",f:vendorCell,v:p=>p.vendor},
       {h:"Project",f:projectCell,v:p=>p.project},
-      {h:"PO Amount",num:1,sum:1,f:p=>`<span class="money">${money(p.amount)}</span>`,v:p=>p.amount},
+      {h:"PO Amount (incl. GST)",num:1,sum:1,f:p=>`<span class="money">${money(p.amount)}</span>`,v:p=>p.amount},
       {h:"PO Date",f:p=>fmtDate(p.date),v:p=>p.date?p.date.getTime():0,c:p=>fmtDate(p.date)},
       {h:"Days waiting",num:1,f:p=>{const d=daysSince(p.date);return d===null?"—":pillHtml(d>CONFIG.slowAwaitingDays?"red":"gray",d+" d");},v:p=>daysSince(p.date)??-1},
       {h:"Status",f:p=>pillHtml("gray","No requisition raised"),v:p=>"No requisition raised"}
@@ -4079,7 +4096,7 @@ const REPORTS={
       {h:"PO No",f:p=>poCell(p),v:p=>p.no},
       {h:"Vendor",f:vendorCell,v:p=>p.vendor},
       {h:"Project",f:projectCell,v:p=>p.project},
-      {h:"PO Amount",num:1,sum:1,f:p=>`<span class="money">${money(p.amount)}</span>`,v:p=>p.amount},
+      {h:"PO Amount (incl. GST)",num:1,sum:1,f:p=>`<span class="money">${money(p.amount)}</span>`,v:p=>p.amount},
       {h:"Requested",num:1,sum:1,f:p=>`<span class="money">${money(p.requested)}</span>`,v:p=>p.requested},
       {h:"Paid",num:1,sum:1,f:p=>`<span class="money">${money(p.paid)}</span>`,v:p=>p.paid},
       {h:"Balance",num:1,sum:1,f:p=>`<span class="money">${money(p.amount-p.paid)}</span>`,v:p=>round2(p.amount-p.paid)},
@@ -4089,7 +4106,7 @@ const REPORTS={
   },
   excess:{
     label:"Excess Payment", tone:"bad",
-    rule:"Payments above the limit: either total paid is more than the PO amount (level PO), or paid against one requisition is more than its Eligible Payment (level Requisition). If a requisition has no Eligible Payment (blank), it is not counted as excess.",
+    rule:"Payments above the limit: either total paid is more than the PO total including GST (level PO), or paid against one requisition is more than its Eligible Payment (level Requisition). If a requisition has no Eligible Payment (blank), it is not counted as excess.",
     rows:()=>STATE.filtered.excess, rid:r=>r.po.id+"|"+r.level+"|"+(r.pr?r.pr.id:""), detail:r=>poDetail(r.po),
     amt:rows=>rows.filter(r=>r.level==="PO").reduce((s,r)=>s+r.excess,0)+rows.filter(r=>r.level!=="PO").reduce((s,r)=>s+r.excess,0),
     cols:[
@@ -4097,7 +4114,7 @@ const REPORTS={
       {h:"PO No",f:r=>poCell(r.po),v:r=>r.po.no},
       {h:"Vendor",f:r=>vendorCell(r.po),v:r=>r.po.vendor},
       {h:"Project",f:r=>projectCell(r.po),v:r=>r.po.project},
-      {h:"Limit (PO amount / Eligible)",num:1,f:r=>`<span class="money">${money(r.ref)}</span>`,v:r=>r.ref},
+      {h:"Limit (PO total incl. GST / Eligible)",num:1,f:r=>`<span class="money">${money(r.ref)}</span>`,v:r=>r.ref},
       {h:"Paid",num:1,f:r=>`<span class="money">${money(r.paid)}</span>`,v:r=>r.paid},
       {h:"Excess",num:1,sum:1,f:r=>`<span class="money" style="color:var(--red)">${money(r.excess)}</span>`,v:r=>r.excess},
       {h:"Last Payment",f:r=>fmtDate(r.po.lastPayment),v:r=>r.po.lastPayment?r.po.lastPayment.getTime():0,c:r=>fmtDate(r.po.lastPayment)}
@@ -4112,7 +4129,7 @@ const REPORTS={
       {h:"PO No",f:p=>poCell(p),v:p=>p.no},
       {h:"Vendor",f:vendorCell,v:p=>p.vendor},
       {h:"Project",f:projectCell,v:p=>p.project},
-      {h:"PO Amount",num:1,sum:1,f:p=>`<span class="money">${money(p.amount)}</span>`,v:p=>p.amount},
+      {h:"PO Amount (incl. GST)",num:1,sum:1,f:p=>`<span class="money">${money(p.amount)}</span>`,v:p=>p.amount},
       {h:"Payments",num:1,sum:1,f:p=>p.pays.length,v:p=>p.pays.length},
       {h:"Paid",num:1,sum:1,f:p=>`<span class="money">${money(p.paid)}</span>`,v:p=>p.paid},
       {h:"% of PO",f:p=>p.amount>0?barCell(p.pctPaid):"—",v:p=>round2(p.pctPaid),c:p=>round2(p.pctPaid)+"%"},
@@ -4129,7 +4146,7 @@ const REPORTS={
       {h:"PO No",f:p=>poCell(p),v:p=>p.no},
       {h:"Vendor",f:vendorCell,v:p=>p.vendor},
       {h:"Project",f:projectCell,v:p=>p.project},
-      {h:"PO Amount",num:1,sum:1,f:p=>`<span class="money">${money(p.amount)}</span>`,v:p=>p.amount},
+      {h:"PO Amount (incl. GST)",num:1,sum:1,f:p=>`<span class="money">${money(p.amount)}</span>`,v:p=>p.amount},
       {h:"Paid",num:1,sum:1,f:p=>`<span class="money">${money(p.paid)}</span>`,v:p=>p.paid},
       {h:"Last Payment",f:p=>fmtDate(p.lastPayment),v:p=>p.lastPayment?p.lastPayment.getTime():0,c:p=>fmtDate(p.lastPayment)},
       {h:"Days since payment",num:1,f:p=>{const d=daysSince(p.lastPayment);return d===null?"—":pillHtml(d>30?"red":"amber",d+" d");},v:p=>daysSince(p.lastPayment)??-1},
@@ -4293,6 +4310,10 @@ function renderReport(){
   }
   if(key==="grn" && !STATE.model.pos.some(p=>p.grn.known)){
     notice=`<div class="notice"><b>GRN source not found.</b> No GRN status field was detected on the Purchase Order report and no GRN report is configured. Open Diagnostics to see the PO field names, then set <code>CONFIG.poFields.grn</code> or <code>CONFIG.grn.report</code>.</div>`;
+  }
+  const AS=STATE.amountSources;
+  if(AS && AS.basic>0 && (key==="excess"||key==="pending"||key==="done"||key==="vendor"||key==="project")){
+    notice+=`<div class="notice">${AS.basic.toLocaleString("en-IN")} PO(s) have no requisition carrying a Total, so their before-GST amount (${htmlEscape(STATE.keys.amount||"?")}) is used as the limit. Payments with GST on such POs can look like excess.</div>`;
   }
   if(STATE.warnings.length) notice+=`<div class="notice">${STATE.warnings.map(htmlEscape).join("<br>")}</div>`;
   if(STATE.model.orphanPR||STATE.model.orphanPD){
