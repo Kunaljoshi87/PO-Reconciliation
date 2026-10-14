@@ -3500,6 +3500,13 @@ const CONFIG = {
   requisitionFields: {
     po: "PO_Number",
     eligible: "Eligible_Payment",
+    // Eligible_Payment is calculated in Creator as:
+    //   Payable_Amount  (+ Remaning_Against_PO only when Last_Payment is true)
+    // When Eligible_Payment is blank, the widget calculates it the same way.
+    basic: "Basic",
+    payable: "Payable_Amount",
+    lastPayment: "Last_Payment",
+    remaining: "Remaning_Against_PO",
     date: "Payment_Request_Date",
     type: "Payment_Type",
     status: "Payment_Request_Status",
@@ -3619,6 +3626,18 @@ function resolveKey(record, candidates){
     if(hit) return hit;
   }
   return null;
+}
+function reqAmounts(rec){
+  const R=CONFIG.requisitionFields;
+  const g=name=>{ const k=resolveKey(rec,[name]); return k?rec[k]:undefined; };
+  const basic=cleanAmount(g(R.basic)), payable=cleanAmount(g(R.payable));
+  const lr=g(R.lastPayment);
+  const last=lr===true || /^(true|yes|1)$/i.test(valueText(lr).trim());
+  const remaining=last?cleanAmount(g(R.remaining)):0;
+  const calc=payable+remaining;
+  const stored=cleanAmount(rec[R.eligible]);
+  const eligible=stored>0?stored:calc;
+  return {basic,payable,remaining,last,stored,eligible,fromCalc:!(stored>0)&&calc>0};
 }
 function round2(n){ return Math.round((Number(n||0)+Number.EPSILON)*100)/100; }
 function money(n){
@@ -3775,10 +3794,11 @@ function buildModel(){
     const po=byId[lookupId(poRef)] || byKey[normKey(valueText(poRef,["PO_Number","PO_No"]))];
     if(!po){ orphanPR++; return; }
     if(ignore.includes(status.toLowerCase())){ po.ignoredReqs++; return; }
+    const am=reqAmounts(rec);
     const pr={
       id:String(rec.ID||""), po,
       date:parseDate(rec[R.date]), type:valueText(rec[R.type]), status,
-      eligible:cleanAmount(rec[R.eligible]), pays:[], paid:0
+      eligible:am.eligible, fromCalc:am.fromCalc, pays:[], paid:0
     };
     po.reqs.push(pr);
     if(pr.id) prById[pr.id]=pr;
@@ -3845,7 +3865,7 @@ function buildModel(){
      so "13-1176", "13 1176" and "13/1176" are treated as the same PO. */
   const core=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
   const TF=CONFIG.tallyFields, RF=CONFIG.requisitionFields, tmap=new Map();
-  let tallyNoPO=0;
+  let tallyNoPO=0; STATE.calcCount=0;
   const slot=(k,no)=>{
     if(!tmap.has(k)) tmap.set(k,{key:k,no:no,vendor:"",project:"",tally:[],reqs:[],tallyTotal:0,reqTotal:0,tVendor:"",tProject:"",rVendor:"",rProject:""});
     const r=tmap.get(k); if(!r.no) r.no=no; return r;
@@ -3869,10 +3889,11 @@ function buildModel(){
     if(ignore.includes(status.toLowerCase())) return;
     const no=valueText(rec[R.po],["PO_Number","PO_No"]).trim(), k=core(no);
     if(!k) return;
-    const r=slot(k,no), el=cleanAmount(rec[R.eligible]);
+    const r=slot(k,no), am=reqAmounts(rec), el=am.eligible;
     r.no=no;   // show the PO number exactly as written in the requisition
-    r.reqs.push({id:String(rec.ID||""),date:parseDate(rec[R.date]),type:valueText(rec[R.type]),status:status,eligible:el});
-    r.reqTotal+=el;
+    r.reqs.push({id:String(rec.ID||""),date:parseDate(rec[R.date]),type:valueText(rec[R.type]),status:status,eligible:el,basic:am.basic,payable:am.payable,remaining:am.remaining,last:am.last,fromCalc:am.fromCalc});
+    r.reqTotal+=el; r.basicTotal=(r.basicTotal||0)+am.basic;
+    if(am.fromCalc) STATE.calcCount=(STATE.calcCount||0)+1;
     if(!r.rVendor) r.rVendor=valueText(rec[RF.vendor],["Vendor_Display_Name","Vendor_Name"]);
     if(!r.rProject) r.rProject=valueText(rec[RF.project],["Project_Code"]);
   });
@@ -3880,7 +3901,9 @@ function buildModel(){
   tmap.forEach(r=>{
     if(!r.tally.length && !r.reqs.length) return;
     r.tallyTotal=round2(r.tallyTotal); r.reqTotal=round2(r.reqTotal);
-    r.diff=round2(r.tallyTotal-r.reqTotal);        // Tally paid minus Requisition
+    r.basicTotal=round2(r.basicTotal||0);
+    r.taxPart=r.basicTotal>0?round2(r.reqTotal-r.basicTotal):null;  // GST / IGST / TDS / PO adjustment = final - basic
+    r.diff=round2(r.tallyTotal-r.reqTotal);        // REAL difference: Tally (final) minus Requisition final amount
     r.vendor=r.rVendor||r.tVendor||"(No vendor)";
     r.project=r.rProject||r.tProject||"(No project)";
     if(!r.reqs.length) r.st="noreq";
@@ -3933,7 +3956,9 @@ function computeReports(pos){
     if(!po.reqs.length && !po.pays.length) R.awaiting.push(po);
     po.reqs.forEach(pr=>{
       if(pr.eligible>tol && !pr.pays.length) R.notRecorded.push({po,pr});
-      if(pr.pays.length && pr.paid-pr.eligible>tol){
+      // A requisition whose Eligible Payment is blank/0 has no limit to compare with,
+      // so it is NOT counted as excess (it is only judged at PO level below).
+      if(pr.pays.length && pr.eligible>tol && pr.paid-pr.eligible>tol){
         R.excess.push({level:"Requisition",po,pr,ref:pr.eligible,paid:pr.paid,excess:round2(pr.paid-pr.eligible)});
       }
     });
@@ -4004,7 +4029,8 @@ function poDetail(po){
     h+=`<div class="main" style="margin:12px 0 6px">Payment requisitions</div>
     <table class="detail-table"><thead><tr><th>Request date</th><th>Type</th><th>Status</th><th class="num">Eligible payment</th><th class="num">Paid</th><th>Recorded?</th></tr></thead><tbody>`;
     po.reqs.forEach(pr=>{
-      const rec=pr.pays.length?pillHtml(pr.paid-pr.eligible>T()?"red":(pr.eligible-pr.paid>T()?"amber":"green"),pr.paid-pr.eligible>T()?"Excess":(pr.eligible-pr.paid>T()?"Part paid":"Paid")):pillHtml("red","Not recorded");
+      const noElig=!(pr.eligible>T());
+      const rec=pr.pays.length?(noElig?pillHtml("gray","Eligible blank"):pillHtml(pr.paid-pr.eligible>T()?"red":(pr.eligible-pr.paid>T()?"amber":"green"),pr.paid-pr.eligible>T()?"Excess":(pr.eligible-pr.paid>T()?"Part paid":"Paid"))):(noElig?pillHtml("gray","Eligible blank"):pillHtml("red","Not recorded"));
       h+=`<tr><td>${fmtDate(pr.date)}</td><td>${htmlEscape(pr.type||"—")}</td><td>${htmlEscape(pr.status||"—")}</td><td class="num money">${money(pr.eligible)}</td><td class="num money">${money(pr.paid)}</td><td>${rec}</td></tr>`;
     });
     h+=`</tbody></table>`;
@@ -4063,7 +4089,7 @@ const REPORTS={
   },
   excess:{
     label:"Excess Payment", tone:"bad",
-    rule:"Payments above the limit: either total paid is more than the PO amount (level PO), or paid against one requisition is more than its Eligible Payment (level Requisition).",
+    rule:"Payments above the limit: either total paid is more than the PO amount (level PO), or paid against one requisition is more than its Eligible Payment (level Requisition). If a requisition has no Eligible Payment (blank), it is not counted as excess.",
     rows:()=>STATE.filtered.excess, rid:r=>r.po.id+"|"+r.level+"|"+(r.pr?r.pr.id:""), detail:r=>poDetail(r.po),
     amt:rows=>rows.filter(r=>r.level==="PO").reduce((s,r)=>s+r.excess,0)+rows.filter(r=>r.level!=="PO").reduce((s,r)=>s+r.excess,0),
     cols:[
@@ -4112,7 +4138,7 @@ const REPORTS={
   },
   tallyReq:{
     label:"Tally vs Requisition", tone:"",
-    rule:"Matched by PO number only. 'Paid in Tally' is the total of Tally payment entries for that PO; 'Requisition' is the total Eligible Payment of its (non-rejected) payment requisitions. Difference = Paid in Tally minus Requisition. Click a row to see every Tally entry and requisition.",
+    rule:"Matched by PO number only. Tally holds the FINAL amount (Basic + GST/IGST - TDS). So it is compared with the requisition's final amount (Eligible Payment = Payable Amount, plus Remaining Against PO on the last payment). Basic and the GST/TDS part are shown for reference. Difference = Paid in Tally minus Requisition final amount. Click a row to see every Tally entry and requisition.",
     rows:()=>STATE.filtered.tallyReq.filter(r=>{
       const s=STATE.tallyStatus;
       return s==="all" || (s==="diff"?(r.st==="more"||r.st==="less"):r.st===s);
@@ -4129,9 +4155,9 @@ const REPORTS={
       }else h+=`<div class="sub">No Tally payment found for this PO.</div>`;
       h+=`<div class="main" style="margin:12px 0 6px">What is in the Payment Requisition</div>`;
       if(r.reqs.length){
-        h+=`<table class="detail-table"><thead><tr><th>Request date</th><th>Type</th><th>Status</th><th class="num">Eligible payment</th></tr></thead><tbody>`;
+        h+=`<table class="detail-table"><thead><tr><th>Request date</th><th>Type</th><th>Status</th><th class="num">Basic</th><th class="num">Payable amount</th><th class="num">Remaining vs PO (last payment)</th><th class="num">Final (Eligible payment)</th></tr></thead><tbody>`;
         r.reqs.forEach(q=>{
-          h+=`<tr><td>${fmtDate(q.date)}</td><td>${htmlEscape(q.type||"—")}</td><td>${htmlEscape(q.status||"—")}</td><td class="num money">${money(q.eligible)}</td></tr>`;
+          h+=`<tr><td>${fmtDate(q.date)}</td><td>${htmlEscape(q.type||"—")}</td><td>${htmlEscape(q.status||"—")}</td><td class="num money">${money(q.basic)}</td><td class="num money">${money(q.payable)}</td><td class="num money">${q.last?money(q.remaining):"—"}</td><td class="num money">${money(q.eligible)}${q.fromCalc?' <span class="pill gray">calculated</span>':""}</td></tr>`;
         });
         h+=`</tbody></table>`;
       }else h+=`<div class="sub">No payment requisition found for this PO.</div>`;
@@ -4145,8 +4171,10 @@ const REPORTS={
       {h:"Tally entries",num:1,sum:1,f:r=>r.tally.length,v:r=>r.tally.length},
       {h:"Paid in Tally",num:1,sum:1,f:r=>`<span class="money">${money(r.tallyTotal)}</span>`,v:r=>r.tallyTotal},
       {h:"Requisitions",num:1,sum:1,f:r=>r.reqs.length,v:r=>r.reqs.length},
-      {h:"Requisition (Eligible Payment)",num:1,sum:1,f:r=>`<span class="money">${money(r.reqTotal)}</span>`,v:r=>r.reqTotal},
-      {h:"Difference (Tally − Requisition)",num:1,sum:1,
+      {h:"Basic (before tax)",num:1,sum:1,f:r=>r.basicTotal>0?`<span class="money">${money(r.basicTotal)}</span>`:"—",v:r=>r.basicTotal},
+      {h:"GST / TDS / other (Final − Basic)",num:1,sum:1,f:r=>r.taxPart===null?"—":`<span class="money">${r.taxPart<0?"− ":""}${money(Math.abs(r.taxPart))}</span>`,v:r=>r.taxPart===null?0:r.taxPart},
+      {h:"Requisition final amount",num:1,sum:1,f:r=>`<span class="money">${money(r.reqTotal)}</span>`,v:r=>r.reqTotal},
+      {h:"Real difference (Tally − Requisition)",num:1,sum:1,
         f:r=>{
           if(Math.abs(r.diff)<=STATE.model.tol) return `<span class="money" style="color:var(--green)">${money(0)}</span>`;
           return `<span class="money" style="color:${r.diff>0?"var(--red)":"var(--amber)"}">${r.diff>0?"+":"−"} ${money(Math.abs(r.diff))}</span>`;
@@ -4259,6 +4287,7 @@ function renderReport(){
     const all=STATE.filtered.tallyReq, n=s=>all.filter(r=>s==="all"?true:(s==="diff"?(r.st==="more"||r.st==="less"):r.st===s)).length;
     const chips=[["all","All"],["diff","Has difference"],["equal","Equal"],["noreq","No requisition"],["notally","Not paid in Tally"]];
     notice+=`<div class="tabs2" style="margin:12px 16px 0">`+chips.map(c=>`<button class="tab2 ${STATE.tallyStatus===c[0]?"active":""}" onclick="RP.setTallyStatus('${c[0]}')">${c[1]} (${n(c[0])})</button>`).join("")+`</div>`;
+    if(STATE.calcCount) notice+=`<div class="notice">${STATE.calcCount} requisition${STATE.calcCount===1?" has":"s have"} a blank Eligible Payment, so the final amount was calculated as Payable Amount (+ Remaning Against PO on last payment), the same formula Creator uses.</div>`;
     if(!STATE.tallyRaw.length) notice+=`<div class="notice">No Tally payments were loaded from <b>${htmlEscape(CONFIG.tallyReport)}</b>. If the report name is right, there is simply nothing synced yet; otherwise check Diagnostics.</div>`;
     if(STATE.model.tallyNoPO) notice+=`<div class="notice">${STATE.model.tallyNoPO} Tally entr${STATE.model.tallyNoPO===1?"y has":"ies have"} no PO number and cannot be matched.</div>`;
   }
