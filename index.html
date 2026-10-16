@@ -339,7 +339,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
 @media(max-width:560px){.accept-check-row{grid-template-columns:1fr;gap:3px}}
 
 
-/* ===== Build v16 - PO Payment Reports (all rules scoped to #rpRoot) ===== */
+/* ===== Build v17 - PO Payment Reports (all rules scoped to #rpRoot) ===== */
 #rpRoot .filters{margin-top:14px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 #rpRoot .filters input,#rpRoot .filters select{border:1px solid var(--border);background:#fff;border-radius:10px;padding:9px 10px;outline:none;min-width:170px}
 #rpRoot .filters input:focus,#rpRoot .filters select:focus{border-color:#d781ad;box-shadow:0 0 0 3px #fae9f2}
@@ -402,7 +402,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;
     <div class="title-wrap">
       <div class="logo">PR</div>
       <div>
-        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v16</span></h1>
+        <h1>Payment Reconciliation Center <span style="font-size:11px;color:#667085;font-weight:700">Build v17</span></h1>
         <div class="subtitle">
           Upload an Excel/CSV payment list, compare each row with live Payment Requisition records,
           review exact and suggested matches, choose an alternate candidate when needed, and update
@@ -3472,7 +3472,7 @@ window.addEventListener("load",async()=>{
 </script>
 
 <script>
-/* ===== Build v16 - PO Payment Reports (isolated in its own scope; window.RP is the only global) ===== */
+/* ===== Build v17 - PO Payment Reports (isolated in its own scope; window.RP is the only global) ===== */
 (function(){
 "use strict";
 /* ============================================================================
@@ -3568,6 +3568,7 @@ const STATE = {
   ready:false, error:null, warnings:[],
   poRaw:[], prRaw:[], pdRaw:[], grnRaw:[], tallyRaw:[],
   tallyStatus:"all",  // status chip of the Tally vs Requisition report
+  tpStatus:"all",     // status chip of the Match Invoice vs Payment Details report
   keys:{},            // detected PO field names
   model:null,         // built aggregation
   filtered:null,      // after filters
@@ -3931,7 +3932,84 @@ function buildModel(){
   });
   tallyRows.sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff)||a.no.localeCompare(b.no));
 
-  STATE.model={pos,orphanPR,orphanPD,tol,tallyRows,tallyNoPO};
+  /* ---- Match Invoice (Tally) vs Payment Details: PO number + UTR ----
+     A Match Invoice record is "the same" as a Payment Detail when BOTH the PO number
+     (letters/digits only) and the UTR (or Transaction ID) are equal, ignoring case, spaces, dashes. */
+  const normU=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+  const reqPoText={};
+  STATE.prRaw.forEach(rec=>{ const id=String(rec.ID||""); if(id) reqPoText[id]=valueText(rec[R.po],["PO_Number","PO_No"]).trim(); });
+  const pdModel={}; pos.forEach(po=>po.pays.forEach(pd=>{ if(pd.id) pdModel[pd.id]=pd; }));
+  const tpPays=[];
+  STATE.pdRaw.forEach(rec=>{
+    const rid=lookupId(rec[P.requisition]), id=String(rec.ID||"");
+    let no=valueText(rec[P.po],["PO_Number","PO_No"]).trim();
+    if(!no && rid) no=reqPoText[rid]||"";
+    const utr=valueText(rec[P.utr]).trim(), txn=valueText(rec[P.txn]).trim();
+    const m=pdModel[id];
+    tpPays.push({id,no,pk:core(no),utr,txn,ks:[normU(utr),normU(txn)].filter(Boolean),
+      done:cleanAmount(rec[P.done]),date:parseDate(rec[P.date]),type:valueText(rec[P.type]),
+      bank:valueText(rec[P.bank]),vendor:m?m.po.vendor:"",project:m?m.po.project:""});
+  });
+  const idxPK_K=new Map(), idxK=new Map(), idxPK=new Map();
+  const addTo=(map,k,v)=>{ if(!map.has(k)) map.set(k,[]); map.get(k).push(v); };
+  tpPays.forEach(p=>{
+    if(p.pk) addTo(idxPK,p.pk,p);
+    p.ks.forEach(k=>{ addTo(idxK,k,p); if(p.pk) addTo(idxPK_K,p.pk+"|"+k,p); });
+  });
+  const uniq=a=>{ const s=new Set(); return a.filter(x=>s.has(x)?false:(s.add(x),true)); };
+  const tpT=[];
+  STATE.tallyRaw.forEach(d=>{
+    const no=valueText(d[TF.po],["PO_Number","PO_No"]).trim();
+    const utr=valueText(d[TF.utr]).trim(), txn=valueText(d[TF.txn]).trim();
+    tpT.push({id:String(d.ID||""),no,pk:core(no),utr,txn,ks:[normU(utr),normU(txn)].filter(Boolean),
+      amount:cleanAmount(d[TF.amount]),company:valueText(d[TF.company]),voucher:valueText(d[TF.voucher]),
+      date:parseDate(d[TF.date]),status:valueText(d[TF.status]).trim(),
+      vendor:valueText(d[TF.vendor],["Vendor_Display_Name","Vendor_Name"]),project:valueText(d[TF.project],["Project_Code"])});
+  });
+  // repeated inside Match Invoice = same PO + same UTR/Txn more than once
+  const dupMap=new Map();
+  tpT.forEach(t=>{ t.dk=(t.pk&&t.ks.length)?t.pk+"|"+t.ks[0]:""; if(t.dk) addTo(dupMap,t.dk,t); });
+  const usedPay=new Set(), tpRows=[];
+  tpT.forEach(t=>{
+    let hit=[];
+    t.ks.forEach(k=>{ hit=hit.concat(idxPK_K.get(t.pk+"|"+k)||[]); });
+    hit=uniq(hit);
+    let st;
+    if(!t.ks.length){ st="noUtr"; hit=t.pk?(idxPK.get(t.pk)||[]):[]; }   // no UTR / Txn ID: cannot be matched by UTR
+    else if(t.pk && hit.length){ st="match"; hit.forEach(p=>usedPay.add(p.id)); }
+    else{
+      let other=[]; t.ks.forEach(k=>{ other=other.concat(idxK.get(k)||[]); }); other=uniq(other);
+      if(other.length){ st="utrOther"; hit=other; }
+      else if(t.pk && idxPK.has(t.pk)){ st="poOnly"; hit=idxPK.get(t.pk); }
+      else { st="none"; hit=[]; }
+    }
+    const group=t.dk?dupMap.get(t.dk):[t];
+    const payTotal=round2(hit.reduce((s,p)=>s+p.done,0));
+    // Amount check for 'same PO + UTR': all Match Invoice lines of this PO+UTR added together
+    // are compared with the Payment Details total (or with one Payment Details entry when the
+    // same payment was entered twice). Up to Rs 1 difference = rounding = same.
+    let tallyTotal=0, amtSt="";
+    if(st==="match"){
+      tallyTotal=round2(group.reduce((s,x)=>s+x.amount,0));
+      amtSt=(Math.abs(tallyTotal-payTotal)<=1 || Math.abs(tallyTotal-hit[0].done)<=1)?"same":"diff";
+    }
+    tpRows.push({rid:"T"+t.id+"|"+tpRows.length,side:"T",st,no:t.no||"(No PO)",utr:t.utr,txn:t.txn,
+      tAmount:t.amount,tDate:t.date,voucher:t.voucher,company:t.company,tStatus:t.status,
+      amtSt,tallyTotal,amtDiff:round2(tallyTotal-payTotal),
+      pays:hit,payTotal,dup:group.length,dupRows:group,
+      vendor:t.vendor||(hit[0]&&hit[0].vendor)||"(No vendor)",project:t.project||(hit[0]&&hit[0].project)||"(No project)"});
+  });
+  tpPays.forEach(p=>{
+    if(usedPay.has(p.id)) return;
+    tpRows.push({rid:"P"+p.id+"|"+tpRows.length,side:"P",st:"onlyPay",no:p.no||"(No PO)",utr:p.utr,txn:p.txn,
+      tAmount:null,tDate:null,voucher:"",company:"",tStatus:"",amtSt:"",tallyTotal:0,amtDiff:0,pays:[p],payTotal:round2(p.done),dup:0,dupRows:[],
+      vendor:p.vendor||"(No vendor)",project:p.project||"(No project)"});
+  });
+  const stOrder={none:0,utrOther:1,poOnly:2,noUtr:3,onlyPay:4,match:5};
+  tpRows.sort((a,b)=>(stOrder[a.st]-stOrder[b.st])||String(a.no).localeCompare(String(b.no)));
+  STATE.tpInfo={tallyNoUtr:tpT.filter(t=>!t.ks.length).length,payNoUtr:tpPays.filter(p=>!p.ks.length).length};
+
+  STATE.model={pos,orphanPR,orphanPD,tol,tallyRows,tallyNoPO,tpRows};
 }
 
 /* ============================ FILTERS + REPORTS =========================== */
@@ -3948,6 +4026,22 @@ function poMatchesFilters(po,f){
   if(!f.q) return true;
   const hay=[po.no,po.vendor,po.project].concat(po.pays.map(p=>p.utr+" "+p.txn)).join(" ").toUpperCase();
   return hay.includes(f.q);
+}
+function tpIs(r,s){
+  if(s==="all") return true;
+  if(s==="dup") return r.dup>1;
+  if(s==="sameAmt") return r.st==="match" && r.amtSt==="same";
+  if(s==="diffAmt") return r.st==="match" && r.amtSt==="diff";
+  return r.st===s;
+}
+function filterTpRows(f){
+  return STATE.model.tpRows.filter(r=>{
+    if(f.project && r.project!==f.project) return false;
+    if(f.vendor && r.vendor!==f.vendor) return false;
+    if(!f.q) return true;
+    const hay=[r.no,r.vendor,r.project,r.utr,r.txn,r.voucher].join(" ").toUpperCase();
+    return hay.includes(f.q);
+  });
 }
 function groupBy(pos,keyName){
   const map=new Map();
@@ -4202,6 +4296,56 @@ const REPORTS={
       },v:r=>({equal:"Equal",more:"Tally paid more",less:"Tally paid less",noreq:"No requisition",notally:"Not paid in Tally"})[r.st]}
     ]
   },
+  tallyPay:{
+    label:"Match Invoice vs Payment Details", tone:"",
+    rule:"Compares Match_Invoce_Report (Tally) with All_Payment_Details_INR using PO number + UTR (Transaction ID if UTR is blank). 'Same PO + UTR in both' = already in Payment Details; it is split into 'same amount (can delete from Match Invoice)' and 'amount different (check)'. 'UTR under different PO' = the UTR is in Payment Details but under another PO. 'Not in Payment Details' = no payment with this PO or UTR. 'No UTR / Txn ID' = Match Invoice record with only a voucher number, cannot be matched by UTR. Click a row to see the records on both sides. This report only reads data; it never deletes anything.",
+    rows:()=>STATE.filtered.tallyPay.filter(r=>tpIs(r,STATE.tpStatus)),
+    rid:r=>r.rid,
+    detail:r=>{
+      let h="";
+      if(r.side==="T"){
+        h+=`<div class="main" style="margin-bottom:6px">Match Invoice record</div>
+        <table class="detail-table"><thead><tr><th>Date</th><th>PO</th><th>Company</th><th>Voucher</th><th>UTR</th><th>Txn ID</th><th>Reconciliation status</th><th class="num">Amount</th></tr></thead><tbody>`;
+        const list=r.dup>1?r.dupRows:[null];
+        if(r.dup>1) r.dupRows.forEach(t=>{
+          h+=`<tr><td>${fmtDate(t.date)}</td><td>${htmlEscape(t.no||"—")}</td><td>${htmlEscape(t.company||"—")}</td><td>${htmlEscape(t.voucher||"—")}</td><td>${htmlEscape(t.utr||"—")}</td><td>${htmlEscape(t.txn||"—")}</td><td>${htmlEscape(t.status||"—")}</td><td class="num money">${money(t.amount)}</td></tr>`;
+        });
+        else h+=`<tr><td>${fmtDate(r.tDate)}</td><td>${htmlEscape(r.no)}</td><td>${htmlEscape(r.company||"—")}</td><td>${htmlEscape(r.voucher||"—")}</td><td>${htmlEscape(r.utr||"—")}</td><td>${htmlEscape(r.txn||"—")}</td><td>${htmlEscape(r.tStatus||"—")}</td><td class="num money">${money(r.tAmount)}</td></tr>`;
+        h+=`</tbody></table>`;
+        if(r.dup>1) h+=`<div class="sub" style="margin-top:6px">This PO + UTR is entered ${r.dup} times in Match Invoice.</div>`;
+      }
+      const lbl={match:"Payment Details with the same PO + UTR",utrOther:"Payment Details where this UTR is used under a different PO",poOnly:"Payments already recorded for this PO (different or blank UTR)",none:"Payment Details",noUtr:"Payments already recorded for this PO (this Match Invoice record has no UTR / Txn ID)",onlyPay:"Payment Details record (no Match Invoice record with this PO + UTR)"}[r.st];
+      h+=`<div class="main" style="margin:12px 0 6px">${htmlEscape(lbl)}</div>`;
+      if(r.pays.length){
+        h+=`<table class="detail-table"><thead><tr><th>Date</th><th>PO</th><th>UTR</th><th>Txn ID</th><th>Type</th><th>Bank</th><th class="num">Payment Done</th></tr></thead><tbody>`;
+        r.pays.forEach(p=>{
+          h+=`<tr><td>${fmtDate(p.date)}</td><td>${htmlEscape(p.no||"—")}</td><td>${htmlEscape(p.utr||"—")}</td><td>${htmlEscape(p.txn||"—")}</td><td>${htmlEscape(p.type||"—")}</td><td>${htmlEscape(p.bank||"—")}</td><td class="num money">${money(p.done)}</td></tr>`;
+        });
+        h+=`</tbody></table>`;
+      }else h+=`<div class="sub">Nothing found in Payment Details for this PO or UTR.</div>`;
+      return h;
+    },
+    amt:rows=>rows.reduce((s,r)=>s+(r.tAmount||0),0),
+    cols:[
+      {h:"Source",f:r=>pillHtml(r.side==="T"?"gray":"amber",r.side==="T"?"Match Invoice":"Payment Details only"),v:r=>r.side==="T"?"Match Invoice":"Payment Details only"},
+      {h:"PO No",f:r=>`<div class="main">${htmlEscape(r.no)}</div>`,v:r=>r.no},
+      {h:"UTR / Txn ID",f:r=>htmlEscape([r.utr,r.txn].filter(Boolean).join(" / ")||"—"),v:r=>[r.utr,r.txn].filter(Boolean).join(" / ")},
+      {h:"Vendor",f:r=>htmlEscape(r.vendor),v:r=>r.vendor},
+      {h:"Project",f:r=>htmlEscape(r.project),v:r=>r.project},
+      {h:"Match Invoice amount",num:1,sum:1,f:r=>r.tAmount===null?"—":`<span class="money">${money(r.tAmount)}</span>`,v:r=>r.tAmount===null?0:r.tAmount},
+      {h:"Payment Done (matched)",num:1,sum:1,f:r=>r.pays.length&&(r.st==="match"||r.st==="onlyPay")?`<span class="money">${money(r.payTotal)}</span>`:"—",v:r=>(r.st==="match"||r.st==="onlyPay")?r.payTotal:0},
+      {h:"Amount check (Match Invoice total vs Payment Details)",f:r=>{
+        if(r.st!=="match") return "—";
+        if(r.amtSt==="same") return pillHtml("green","Same amount");
+        return pillHtml("amber","Different "+(r.amtDiff>0?"+":"−")+" "+money(Math.abs(r.amtDiff)));
+      },v:r=>r.st!=="match"?"":(r.amtSt==="same"?"Same amount":"Different "+r.amtDiff)},
+      {h:"Result",f:r=>{
+        const m={match:["green","Same PO + UTR in both"],utrOther:["amber","UTR found under a different PO"],poOnly:["amber","PO has payment, UTR different / blank"],none:["red","Not in Payment Details"],noUtr:["gray","No UTR / Txn ID"],onlyPay:["gray","Only in Payment Details"]}[r.st];
+        return pillHtml(m[0],m[1]);
+      },v:r=>({match:"Same PO + UTR in both",utrOther:"UTR found under a different PO",poOnly:"PO has payment, UTR different / blank",none:"Not in Payment Details",noUtr:"No UTR / Txn ID",onlyPay:"Only in Payment Details"})[r.st]},
+      {h:"Repeated in Match Invoice",num:1,f:r=>r.dup>1?pillHtml("red","× "+r.dup):(r.side==="T"?"—":""),v:r=>r.dup>1?r.dup:0,c:r=>r.dup>1?r.dup:""}
+    ]
+  },
   vendor:groupDef("Vendor-wise Summary","vendor","Vendor","Totals for every vendor: PO value, requisitions raised, amount paid, balance, excess, and open follow-ups. Click a row to list its POs."),
   project:groupDef("Project-wise Summary","project","Project","Totals for every project code: PO value, requisitions raised, amount paid, balance, excess, and open follow-ups. Click a row to list its POs.")
 };
@@ -4237,7 +4381,7 @@ function groupDef(label,key,colName,rule){
 }
 
 const TILE_KEYS=["awaiting","notRecorded","pending","excess","done","grn"];
-const TAB_KEYS=["tallyReq","vendor","project"];
+const TAB_KEYS=["tallyReq","tallyPay","vendor","project"];
 
 /* ============================ RENDERING =================================== */
 function onFilterChange(){ render(); }
@@ -4248,6 +4392,7 @@ function clearFilters(){
   render();
 }
 function setTallyStatus(s){ STATE.tallyStatus=s; renderTabs(); renderReport(); }
+function setTpStatus(s){ STATE.tpStatus=s; renderTabs(); renderReport(); }
 function setActive(key){ STATE.active=key; renderTiles(); renderTabs(); renderReport(); }
 
 function render(){
@@ -4255,6 +4400,7 @@ function render(){
   const f=currentFilters();
   STATE.filtered=computeReports(STATE.model.pos.filter(p=>poMatchesFilters(p,f)));
   STATE.filtered.tallyReq=filterTallyRows(f);
+  STATE.filtered.tallyPay=filterTpRows(f);
   renderTiles(); renderTabs(); renderReport();
 }
 function renderTiles(){
@@ -4307,6 +4453,14 @@ function renderReport(){
     if(STATE.calcCount) notice+=`<div class="notice">${STATE.calcCount} requisition${STATE.calcCount===1?" has":"s have"} a blank Eligible Payment, so the final amount was calculated as Payable Amount (+ Remaning Against PO on last payment), the same formula Creator uses.</div>`;
     if(!STATE.tallyRaw.length) notice+=`<div class="notice">No Tally payments were loaded from <b>${htmlEscape(CONFIG.tallyReport)}</b>. If the report name is right, there is simply nothing synced yet; otherwise check Diagnostics.</div>`;
     if(STATE.model.tallyNoPO) notice+=`<div class="notice">${STATE.model.tallyNoPO} Tally entr${STATE.model.tallyNoPO===1?"y has":"ies have"} no PO number and cannot be matched.</div>`;
+  }
+  if(key==="tallyPay"){
+    const all=STATE.filtered.tallyPay, n=s=>all.filter(r=>tpIs(r,s)).length;
+    const chips=[["all","All"],["match","Same PO + UTR in both"],["sameAmt","↳ Same amount (can delete)"],["diffAmt","↳ Amount different (check)"],["dup","Repeated in Match Invoice"],["utrOther","UTR under different PO"],["poOnly","PO same, UTR different"],["none","Not in Payment Details"],["noUtr","No UTR / Txn ID"],["onlyPay","Only in Payment Details"]];
+    notice+=`<div class="tabs2" style="margin:12px 16px 0">`+chips.map(c=>`<button class="tab2 ${STATE.tpStatus===c[0]?"active":""}" onclick="RP.setTpStatus('${c[0]}')">${c[1]} (${n(c[0])})</button>`).join("")+`</div>`;
+    if(!STATE.tallyRaw.length) notice+=`<div class="notice">No records were loaded from <b>${htmlEscape(CONFIG.tallyReport)}</b>.</div>`;
+    const TI=STATE.tpInfo||{};
+    if(TI.tallyNoUtr||TI.payNoUtr) notice+=`<div class="notice">${TI.tallyNoUtr||0} Match Invoice record(s) and ${TI.payNoUtr||0} Payment Detail(s) have no UTR / Transaction ID, so they cannot be matched by UTR.</div>`;
   }
   if(key==="grn" && !STATE.model.pos.some(p=>p.grn.known)){
     notice=`<div class="notice"><b>GRN source not found.</b> No GRN status field was detected on the Purchase Order report and no GRN report is configured. Open Diagnostics to see the PO field names, then set <code>CONFIG.poFields.grn</code> or <code>CONFIG.grn.report</code>.</div>`;
@@ -4437,7 +4591,7 @@ async function refreshData(){
 function onShow(){
   if(!STATE.ready && !STATE.loading) refreshData();
 }
-window.RP={onShow,refreshData,setActive,setTallyStatus,sortBy,toggleRow,onFilterChange,clearFilters,exportCurrent,openDiagnostics,closeDiagnostics};
+window.RP={onShow,refreshData,setActive,setTallyStatus,setTpStatus,sortBy,toggleRow,onFilterChange,clearFilters,exportCurrent,openDiagnostics,closeDiagnostics};
 
 })();
 </script>
